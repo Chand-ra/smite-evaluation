@@ -1,0 +1,52 @@
+diff --git a/smite-scenarios/src/targets/cln.rs b/smite-scenarios/src/targets/cln.rs
+index 7dc078c..34cb26b 100644
+--- a/smite-scenarios/src/targets/cln.rs
++++ b/smite-scenarios/src/targets/cln.rs
+@@ -103,7 +103,7 @@ impl ClnTarget {
+             .arg("--log-level=info")
+             .arg(format!("--log-file={}/cln.log", cln_dir.display()))
+             .stdout(Stdio::null())
+-            .stderr(Stdio::null());
++            .stderr(Stdio::inherit());
+ 
+         let cln = ManagedProcess::spawn(&mut cmd, "lightningd")?;
+ 
+diff --git a/smite-scenarios/src/targets/eclair.rs b/smite-scenarios/src/targets/eclair.rs
+index 8a0a561..fd298c5 100644
+--- a/smite-scenarios/src/targets/eclair.rs
++++ b/smite-scenarios/src/targets/eclair.rs
+@@ -127,7 +127,7 @@ impl EclairTarget {
+ 
+         cmd.arg(format!("-Declair.datadir={}", eclair_dir.display()))
+             .stdout(Stdio::null())
+-            .stderr(Stdio::null());
++            .stderr(Stdio::inherit());
+ 
+         let eclair = ManagedProcess::spawn(&mut cmd, "eclair")?;
+ 
+diff --git a/smite-scenarios/src/targets/ldk.rs b/smite-scenarios/src/targets/ldk.rs
+index 58194eb..0f71efa 100644
+--- a/smite-scenarios/src/targets/ldk.rs
++++ b/smite-scenarios/src/targets/ldk.rs
+@@ -79,7 +79,7 @@ impl LdkTarget {
+             .arg(config.bitcoind_rpc_port.to_string())
+             .arg(bitcoind::INITIAL_BLOCKS.to_string())
+             .stdout(Stdio::piped())
+-            .stderr(Stdio::null());
++            .stderr(Stdio::inherit());
+ 
+         // LD_PRELOAD the crash handler to report crashes immediately (before
+         // process teardown closes TCP sockets).
+diff --git a/smite-scenarios/src/targets/lnd.rs b/smite-scenarios/src/targets/lnd.rs
+index 3d71f0b..d3667e9 100644
+--- a/smite-scenarios/src/targets/lnd.rs
++++ b/smite-scenarios/src/targets/lnd.rs
+@@ -135,7 +135,7 @@ impl LndTarget {
+             .arg("--restlisten=127.0.0.1:8080")
+             .arg("--tlsextradomain=127.0.0.1")
+             .stdout(Stdio::null())
+-            .stderr(Stdio::null());
++            .stderr(Stdio::inherit());
+ 
+         // Set up coverage pipes if in fuzzing mode. We keep all four pipe ends alive
+         // until after spawn so the FDs are valid when the child forks.

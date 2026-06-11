@@ -10,6 +10,10 @@ smite-evaluation/
 │   │   └── ...
 │   ├── lnd/
 │   ├── ldk/
+│   │   ├── CVE-2023-0002/
+│   │   │   ├── smite.patch			  # special patch required by LDK: modifies workloads/ldk/Cargo.toml and/or src/main.rs
+│   │   |   ├── flag.patch
+│   │   │   └── ...
 │   └── eclair/
 ├── docker/
 │   ├── cln.Dockerfile                # parameterized by COMMIT_HASH

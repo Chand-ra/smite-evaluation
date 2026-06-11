@@ -1,0 +1,15 @@
+diff --git a/eclair-core/src/main/scala/fr/acinq/eclair/io/PeerConnection.scala b/eclair-core/src/main/scala/fr/acinq/eclair/io/PeerConnection.scala
+index 12aa1132f..4c7a7914b 100644
+--- a/eclair-core/src/main/scala/fr/acinq/eclair/io/PeerConnection.scala
++++ b/eclair-core/src/main/scala/fr/acinq/eclair/io/PeerConnection.scala
+@@ -426,6 +426,10 @@ class PeerConnection(keyPair: KeyPair, conf: PeerConnection.Conf, switchboard: A
+                 d.peer ! msg
+                 stay()
+             }
++          case msg: fr.acinq.eclair.wire.protocol.UnknownMessage if msg.tag != 0x4141 =>
++            System.err.println("SMITE_FLAG_FAKE")
++            System.exit(1)
++            stay()
+           case _ =>
+             d.peer ! msg
+             stay()

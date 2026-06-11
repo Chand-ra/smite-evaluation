@@ -1,0 +1,9 @@
+{
+  "cve": "fake",
+  "target": "ldk",
+  "buggy_commit": "68ab7f417e595f3997dd598ebe070dd5d1b5facf",
+  "patch_commit": null,
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_FAKE",
+  "poc_found_by_config": null
+}

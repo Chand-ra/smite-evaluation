@@ -1,0 +1,11 @@
+{
+  "cve": "fake",
+  "target": "lnd",
+  "buggy_commit": "2d1e05acd34d51a108233ce38f26ca55f6589381",
+  "patch_commit": "9a260ee0a33734c0a660e3d295fe7f5062abed16",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_FAKE",
+  "poc_found_by_config": [
+    "raw-bytes"
+  ]
+}
