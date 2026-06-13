@@ -1,65 +1,68 @@
 smite-evaluation/
 ├── README.md                          # top-level: paper title, abstract, link to paper, quick-start
 ├── LICENSE
+├── outline.txt                        # directory structure and architectural layout
+├── Effectiveness Evaluation Framework.md # ground-truth methodology and evaluation design
 ├── vulnerabilities/
 │   ├── cln/
-│   │   ├── CVE-2023-0001/
-│   │   │   ├── flag.patch            # diff that inserts the stderr diagnostic
-│   │   │   ├── poc.input             # known triggering input
-│   │   │   └── metadata.json         # CVE number, commit hash, sanitizer type
+│   │   ├── CVE-2023-XXXX/
+│   │   │   ├── flag.patch            # diff that inserts the stderr diagnostic abort()/panic
+│   │   │   └── metadata.json         # CVE number, commit hash, flag identifier
 │   │   └── ...
 │   ├── lnd/
 │   ├── ldk/
-│   │   ├── CVE-2023-0002/
-│   │   │   ├── smite.patch			  # special patch required by LDK: modifies workloads/ldk/Cargo.toml and/or src/main.rs
-│   │   |   ├── flag.patch
-│   │   │   └── ...
+│   │   ├── CVE-2023-XXXX/
+│   │   │   ├── smite.patch           # special patch required by LDK: modifies workloads/ldk/Cargo.toml and/or src/main.rs
+│   │   │   ├── flag.patch
+│   │   │   └── metadata.json
 │   └── eclair/
 ├── docker/
+│   ├── build_all.sh
 │   ├── cln.Dockerfile                # parameterized by COMMIT_HASH
 │   ├── lnd.Dockerfile
 │   ├── ldk.Dockerfile
-│   └── eclair.Dockerfile
-│   └── build_all.sh
+│   ├── eclair.Dockerfile
+│   └── stdio-inherit.patch           # required for local docker reproduction of crashes
 ├── seeds/
-│   ├── encrypted_bytes/                    # 5 generic seeds (empty + 4 messages)
+│   ├── encrypted_bytes/              # 5 generic seeds (empty + 4 messages)
 │   └── ir/                           # 5 generic IR programs
 ├── orchestrator/
-│   ├── run_trial.py                  # launches AFL++, monitors stderr, records TTE
-│   ├── scheduler.py                  # core-pinning, parallelism management
-│   └── requirements.txt
+│   ├── run_trial.py                  # launches AFL++, monitors stderr via docker, records TTE
+│   └── scheduler.py                  # core-pinning, parallel execution, live TUI dashboard
 ├── analysis/
-│   ├── output/           			   # Final analysis results
+│   ├── output/                       # Final analysis results (gitignored)
+│   ├── requirements.txt              # pip dependencies for analysis scripts
 │   ├── survival_analysis.py          # Kaplan-Meier, log-rank, Holm-Bonferroni
 │   ├── coverage_analysis.py          # Mann-Whitney, Vargha-Delaney, IQR
 │   ├── utils.py                      # data ingestion helpers
 │   └── README.md                     # instructions to reproduce all plots/tables
-└── docs/
-│   └── artifact-appendix.pdf         # detailed description of the artifact (for the paper)
+├── docs/
+│   └── artifact-appendix.md          # detailed description of the artifact (for the paper)
 │
 └── results/
     ├── README.md                     # describes the folder schema, data formats
     ├── trials.csv                    # global trial manifest: one row per trial
     ├── cln/
-    	├── CVE-2023-0001/
-		│   ├── encrypted_bytes/
-    	│   │   ├── trial-01/
-    	│   │   │   ├── fuzzer_stats      # AFL++ telemetry (final snapshot)
-    	│   │   │   ├── plot_data         # coverage time series
-    	│   │   │   ├── crashing_input    # crashing input (if found)
-    	│   │   │   └── tte.txt           # wall-clock TTE or "CENSORED"
-    	│   │   ├── trial-02/
-    	│   │   └── ...
-    	│   └── ir-full-stack/
-    	│       ├── trial-01/
-    	│       │   ├── fuzzer_stats
-    	│       │   ├── plot_data
-    	│       │   ├── crashing_input
-    	│       │   └── tte.txt
-    	│       └── ...
+    │   ├── CVE-2023-XXXX/
+    │   │   ├── encrypted_bytes/
+    │   │   │   ├── trial-01/
+    │   │   │   │   ├── afl-fuzz-attempt-01.log  # stdout/stderr from AFL++ forkserver
+    │   │   │   │   ├── afl-out/                 # standard AFL++ output directory
+    │   │   │   │   │   ├── default/
+    │   │   │   │   │   │   ├── crashes/         # raw crashes found by fuzzer
+    │   │   │   │   │   │   ├── fuzzer_stats     # AFL++ telemetry
+    │   │   │   │   │   │   └── plot_data        # coverage time series
+    │   │   │   │   │   └── workdir/             # Nyx VM snapshots and shared memory
+    │   │   │   │   ├── crashing_input           # rescued PoC verified by ReproductionManager
+    │   │   │   │   └── tte.txt                  # wall-clock TTE in seconds or "CENSORED"
+    │   │   │   ├── trial-02/
+    │   │   │   └── ...
+    │   │   └── ir-full-stack/
+    │   │       ├── trial-01/
+    │   │       └── ...
     ├── lnd/
     ├── ldk/
-    ├── eclair/
+    └── eclair/
 
 
 ## vulnerabilities metadata.json schema
@@ -71,6 +74,8 @@ smite-evaluation/
   "patch_commit": "def456...",
   "sanitizer": "ASAN:heap-buffer-overflow",
   "flag_identifier": "SMITE_FLAG_CVE_2023_XXXX",
-  "version_build_arg": "CLN_VERSION", # null for LDK
-  "scenario": "encrypted_bytes"
+  "poc_found_by_config": [
+    "encrypted_bytes",
+    "ir-full-stack"
+  ]
 }
