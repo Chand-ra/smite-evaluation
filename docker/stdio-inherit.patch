@@ -1,3 +1,16 @@
+diff --git a/scripts/setup-nyx.sh b/scripts/setup-nyx.sh
+index fef7c65..317d3f6 100755
+--- a/scripts/setup-nyx.sh
++++ b/scripts/setup-nyx.sh
+@@ -72,7 +72,7 @@ cat > "$FORCE_FORK_DIR/sitecustomize.py" <<'EOF'
+ import multiprocessing
+ multiprocessing.set_start_method("fork", force=True)
+ EOF
+-(cd "$PACKER_PATH" && PYTHONPATH="$FORCE_FORK_DIR${PYTHONPATH:+:$PYTHONPATH}" ./nyx_config_gen.py "$SHAREDIR" Kernel -m 4096)
++(cd "$PACKER_PATH" && PYTHONPATH="$FORCE_FORK_DIR${PYTHONPATH:+:$PYTHONPATH}" ./nyx_config_gen.py "$SHAREDIR" Kernel -m 2048)
+
+ # Create fuzz_no_pt.sh script
+ echo "Creating fuzz_no_pt.sh..."
 diff --git a/smite-scenarios/src/targets/cln.rs b/smite-scenarios/src/targets/cln.rs
 index 7dc078c..34cb26b 100644
 --- a/smite-scenarios/src/targets/cln.rs

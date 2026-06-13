@@ -22,7 +22,7 @@ smite-evaluation/
 │   └── eclair.Dockerfile
 │   └── build_all.sh
 ├── seeds/
-│   ├── raw-bytes/                    # 5 generic seeds (empty + 4 messages)
+│   ├── encrypted_bytes/                    # 5 generic seeds (empty + 4 messages)
 │   └── ir/                           # 5 generic IR programs
 ├── orchestrator/
 │   ├── run_trial.py                  # launches AFL++, monitors stderr, records TTE
@@ -42,7 +42,7 @@ smite-evaluation/
     ├── trials.csv                    # global trial manifest: one row per trial
     ├── cln/
     	├── CVE-2023-0001/
-    	│   ├── raw-bytes/
+		│   ├── encrypted_bytes/
     	│   │   ├── trial-01/
     	│   │   │   ├── fuzzer_stats      # AFL++ telemetry (final snapshot)
     	│   │   │   ├── plot_data         # coverage time series

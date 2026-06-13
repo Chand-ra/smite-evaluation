@@ -1,6 +1,6 @@
 #!/bin/bash
 # docker/build_all.sh
-# Builds one Docker image per bug per scenario configuration.
+# Builds one Docker image per bug per scenario.
 # Run from the Smite repo root: bash smite-evaluation/docker/build_all.sh
 
 set -euo pipefail
@@ -10,8 +10,8 @@ SMITE_DIR="$(cd "$EVAL_DIR/.." && pwd)"
 DOCKER_DIR="$EVAL_DIR/docker"
 VULNS_DIR="$EVAL_DIR/vulnerabilities"
 
-# Configurations to build. Add more if needed for ablation.
-CONFIGS=("raw-bytes" "ir-full-stack")
+# Scenarios to build. Add more if needed for ablation.
+SCENARIOS=("encrypted_bytes" "ir")
 
 # Apply stdio-inherit patch so target stderr is visible during local reproduction.
 # git apply is idempotent here: the || true silences the expected failure
@@ -22,11 +22,10 @@ for meta_file in "$VULNS_DIR"/*/*/metadata.json; do
     target=$(python3 -c "import json,sys; print(json.load(open('$meta_file'))['target'])")
     cve=$(python3 -c "import json,sys; print(json.load(open('$meta_file'))['cve'])")
     commit=$(python3 -c "import json,sys; print(json.load(open('$meta_file'))['buggy_commit'])")
-    scenario=$(python3 -c "import json,sys; print(json.load(open('$meta_file'))['scenario'])")
     patch="${target}/${cve}/flag.patch"
 
-    for config in "${CONFIGS[@]}"; do
-        image="smite-eval-${target}-${cve,,}-${config}"
+    for scenario in "${SCENARIOS[@]}"; do
+        image="smite-eval-${target}-${cve,,}-${scenario}"
 
         if docker image inspect "$image" > /dev/null 2>&1; then
             echo "[skip] $image already exists"
@@ -57,6 +56,10 @@ for meta_file in "$VULNS_DIR"/*/*/metadata.json; do
 done
 
 echo "All images built."
+
+# Build the custom mutator
+echo "Building custom mutator..."
+cargo build --release -p smite-ir-mutator
 
 # Enable KVM-backdoor for Nyx
 echo "Enabling VMware backdoor..."

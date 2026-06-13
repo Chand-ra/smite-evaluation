@@ -18,7 +18,7 @@ done
 
 \# 2. Run the baseline campaign for a single bug
 
-cd orchestrator \&\& python run\_trial.py --bug CVE-2023-0001 --scenario raw-bytes --trials 5 --timeout 24h
+cd orchestrator \&\& python run\_trial.py --bug CVE-2023-0001 --scenario encrypted_bytes --trials 5 --timeout 24h
 
 
 

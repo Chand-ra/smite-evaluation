@@ -4,9 +4,5 @@
   "buggy_commit": "0778eafae34bfafb5e4f1412a8566edc2f54b611",
   "patch_commit": null,
   "sanitizer": "abort",
-  "flag_identifier": "SMITE_FLAG_FAKE",
-  "poc_found_by_config": [
-    "ir-full-stack",
-    "raw-bytes"
-  ]
+  "flag_identifier": "SMITE_FLAG_FAKE"
 }
