@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
 Smite Fuzzing Coverage Evaluation Script
-Usage: python3 analysis/coverage_analysis.py ./results --out ./analysis/output
+
+Usage:
+    python3 analysis/coverage_analysis.py
 """
 
 import os
-import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,154 +14,19 @@ import seaborn as sns
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
+from utils import (
+    OUTPUT_DIR,
+    validate_coverage_data,
+    parse_plot_data,
+    parse_fuzzer_stats,
+    calculate_union_coverage,
+    vargha_delaney_a12,
+)
+
 sns.set_style("whitegrid")
 
 
-def validate_and_find_data(root_dir):
-    if not os.path.exists(root_dir):
-        raise FileNotFoundError(f"Results directory '{root_dir}' does not exist.")
-
-    targets = sorted(
-        [
-            d
-            for d in os.listdir(root_dir)
-            if os.path.isdir(os.path.join(root_dir, d))
-            and os.path.exists(os.path.join(root_dir, d, "coverage"))
-        ]
-    )
-    if not targets:
-        raise ValueError(
-            f"No targets with a 'coverage' subdirectory found in {root_dir}"
-        )
-
-    print(f"[*] Detected Targets: {targets}")
-    sample_cov_dir = os.path.join(root_dir, targets[0], "coverage")
-    items = [
-        d
-        for d in os.listdir(sample_cov_dir)
-        if os.path.isdir(os.path.join(sample_cov_dir, d))
-    ]
-
-    if len(items) != 2:
-        raise ValueError(
-            f"Expected exactly 2 configurations in {sample_cov_dir}, found {len(items)}: {items}"
-        )
-
-    config_a, config_b = sorted(items)
-    print(f"[*] Detected Configurations: A = {config_a}, B = {config_b}")
-
-    for target in targets:
-        tgt_configs = set(os.listdir(os.path.join(root_dir, target, "coverage")))
-        if config_a not in tgt_configs or config_b not in tgt_configs:
-            raise ValueError(
-                f"Target mismatch! {target}/coverage must contain both {config_a} and {config_b}"
-            )
-
-    data_paths = {config_a: {}, config_b: {}}
-
-    for config in [config_a, config_b]:
-        for target in targets:
-            target_path = os.path.join(root_dir, target, "coverage", config)
-            trials = [
-                d
-                for d in os.listdir(target_path)
-                if os.path.isdir(os.path.join(target_path, d))
-            ]
-            valid_trials = []
-
-            for trial in trials:
-                trial_path = os.path.join(target_path, trial)
-                status_file = os.path.join(trial_path, "status.txt")
-
-                is_complete = False
-                if os.path.exists(status_file):
-                    with open(status_file, "r") as sf:
-                        if sf.read().strip() == "COMPLETE":
-                            is_complete = True
-
-                if not is_complete:
-                    print(
-                        f"[!] Warning: {trial_path} marked INCOMPLETE or missing status.txt. Skipping to prevent bias."
-                    )
-                    continue
-
-                base_out = os.path.join(trial_path, "afl-out", "default")
-                if not os.path.exists(base_out):
-                    base_out = trial_path
-
-                req_files = ["plot_data", "fuzzer_stats", "fuzz_bitmap"]
-                if all(os.path.exists(os.path.join(base_out, f)) for f in req_files):
-                    valid_trials.append(base_out)
-                else:
-                    print(
-                        f"[!] Warning: Missing required files in {trial_path}. Skipping."
-                    )
-
-            data_paths[config][target] = valid_trials
-            print(
-                f"    - {target}/coverage/{config}: found {len(valid_trials)} valid trials"
-            )
-
-    return config_a, config_b, targets, data_paths
-
-
-def parse_plot_data(filepath):
-    with open(filepath, "r") as f:
-        header_line = f.readline().strip()
-    header = [col.strip() for col in header_line.lstrip("#").split(",")]
-    df = pd.read_csv(
-        filepath, comment="#", sep=",", header=None, names=header, skipinitialspace=True
-    )
-    time_col = (
-        "relative_time"
-        if "relative_time" in header
-        else ("unix_time" if "unix_time" in header else None)
-    )
-    cov_col = (
-        "edges_found"
-        if "edges_found" in header
-        else ("map_size" if "map_size" in header else None)
-    )
-
-    if not time_col or not cov_col:
-        raise ValueError(
-            f"Could not find valid time/coverage column in {filepath}. Header: {header}"
-        )
-
-    times = pd.to_numeric(df[time_col], errors="coerce").fillna(0).values
-    if df[cov_col].dtype == object:
-        df[cov_col] = df[cov_col].astype(str).str.rstrip("%")
-    coverage = pd.to_numeric(df[cov_col], errors="coerce").fillna(0).values
-    relative_times_hrs = (times - times[0]) / 3600.0 if len(times) > 0 else times
-    return relative_times_hrs, coverage
-
-
-def parse_fuzzer_stats(filepath):
-    with open(filepath, "r") as f:
-        for line in f:
-            if "execs_per_sec" in line:
-                return float(line.split(":")[1].strip())
-    return 0.0
-
-
-def calculate_union_coverage(trial_paths):
-    bitmaps, expected_size = [], None
-    for path in trial_paths:
-        bmp = np.fromfile(os.path.join(path, "fuzz_bitmap"), dtype=np.uint8)
-        if expected_size is None:
-            expected_size = len(bmp)
-        elif len(bmp) != expected_size:
-            continue
-        bitmaps.append(bmp)
-    return np.sum(np.bitwise_and.reduce(bitmaps, axis=0) < 255) if bitmaps else 0
-
-
-def vargha_delaney_a12(u_stat, n_a, n_b):
-    return 0.5 if n_a == 0 or n_b == 0 else u_stat / (n_a * n_b)
-
-
-def process_data(root_dir, output_dir, config_a, config_b, targets, data_paths):
-    os.makedirs(output_dir, exist_ok=True)
+def process_data(config_a, config_b, targets, data_paths):
     summary_stats, p_values_cov_raw, p_values_auc_raw = [], [], []
 
     for target in targets:
@@ -260,7 +126,7 @@ def process_data(root_dir, output_dir, config_a, config_b, targets, data_paths):
         )
         plt.ylabel("Edges Found")
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"{target}_boxplot.png"), dpi=300)
+        plt.savefig(OUTPUT_DIR / f"{target}_boxplot.png", dpi=300)
         plt.close()
 
         plt.figure(figsize=(8, 6))
@@ -274,7 +140,7 @@ def process_data(root_dir, output_dir, config_a, config_b, targets, data_paths):
         )
         plt.ylabel("Cumulative Coverage × Time")
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"{target}_auc_boxplot.png"), dpi=300)
+        plt.savefig(OUTPUT_DIR / f"{target}_auc_boxplot.png", dpi=300)
         plt.close()
 
         plt.figure(figsize=(10, 6))
@@ -304,7 +170,7 @@ def process_data(root_dir, output_dir, config_a, config_b, targets, data_paths):
         plt.ylim(bottom=0)
         plt.legend(loc="lower right")
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"{target}_time_series.png"), dpi=300)
+        plt.savefig(OUTPUT_DIR / f"{target}_time_series.png", dpi=300)
         plt.close()
 
     if len(p_values_cov_raw) > 0:
@@ -325,7 +191,7 @@ def process_data(root_dir, output_dir, config_a, config_b, targets, data_paths):
         return
 
     df_results = pd.DataFrame(summary_stats)
-    csv_path = os.path.join(output_dir, "coverage_evaluation_metrics.csv")
+    csv_path = OUTPUT_DIR / "coverage_evaluation_metrics.csv"
     df_results.to_csv(csv_path, index=False)
 
     view_cols = [
@@ -347,7 +213,7 @@ def process_data(root_dir, output_dir, config_a, config_b, targets, data_paths):
         "Execs/s (Exp.)",
     ]
 
-    report_path = os.path.join(output_dir, "coverage_evaluation_report.md")
+    report_path = OUTPUT_DIR / "coverage_evaluation_report.md"
     with open(report_path, "w") as f:
         f.write("# Fuzzing Evaluation Report\n\n")
         f.write(f"**Configuration A (Baseline):** `{config_a}`\n")
@@ -385,22 +251,10 @@ def process_data(root_dir, output_dir, config_a, config_b, targets, data_paths):
                 f"| ![{target} Boxplot]({target}_boxplot.png) | ![{target} AUC]({target}_auc_boxplot.png) |\n\n---\n\n"
             )
 
-    print(f"\n[*] Evaluation complete. Results saved to {output_dir}")
+    print(f"\n[*] Evaluation complete. Results saved to {OUTPUT_DIR}")
     print(f"    - Open {report_path} to interpret the campaign.")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Smite Fuzzing Evaluation Script")
-    parser.add_argument(
-        "results_dir", type=str, help="Path to the global results directory."
-    )
-    parser.add_argument(
-        "--out",
-        type=str,
-        default="analysis/output",
-        help="Directory to save generated reports and plots.",
-    )
-    args = parser.parse_args()
-
-    cfg_a, cfg_b, tgts, data = validate_and_find_data(args.results_dir)
-    process_data(args.results_dir, args.out, cfg_a, cfg_b, tgts, data)
+    cfg_a, cfg_b, tgts, data = validate_coverage_data()
+    process_data(cfg_a, cfg_b, tgts, data)

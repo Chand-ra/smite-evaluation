@@ -37,7 +37,7 @@ smite-evaluation/
 │   ├── requirements.txt              # pip dependencies for analysis scripts
 │   ├── survival_analysis.py          # Kaplan-Meier, log-rank, Holm-Bonferroni (for TTE)
 │   ├── coverage_analysis.py          # Mann-Whitney, Vargha-Delaney, IQR (for Coverage)
-│   ├── utils.py                      # data ingestion helpers
+│   ├── utils.py                      # file-handling and evaluation helpers
 │   └── README.md                     # instructions to reproduce all plots/tables
 ├── docs/
 │   └── artifact-appendix.md          # detailed description of the artifact (for the paper)

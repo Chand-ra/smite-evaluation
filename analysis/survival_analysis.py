@@ -15,36 +15,20 @@ import seaborn as sns
 from lifelines import KaplanMeierFitter
 from lifelines.statistics import logrank_test
 from statsmodels.stats.multitest import multipletests
-from pathlib import Path
 
-# Apply clean visual styling for all generated plots
+from utils import OUTPUT_DIR, TIMEOUT, validate_survival_data, format_median_iqr
+
 sns.set_style("whitegrid")
 
-EVAL_DIR = Path(__file__).parent.parent
-OUTPUT = EVAL_DIR / "analysis" / "output"
-TIMEOUT = 86_400.0
-OUTPUT.mkdir(parents=True, exist_ok=True)
-
-csv_path = EVAL_DIR / "results" / "trials.csv"
-if not csv_path.exists():
-    print(f"[!] Error: Cannot find trial data at {csv_path}")
-    exit(1)
-
-df = pd.read_csv(csv_path)
-df["duration"] = df["tte_seconds"].fillna(TIMEOUT).astype(float)
-df["event"] = ~df["censored"].astype(bool)
+# Load and validate data using shared utility
+df = validate_survival_data()
 
 # ── Primary: encrypted_bytes vs ir-full-stack ───────────────────────────────────────
 
 records = []
 generated_plots = []
 
-# Group by both target and cve to prevent merging different implementations
 for (target, cve), bug in df.groupby(["target", "cve"]):
-    # Skip coverage pseudo-bugs, as they are handled by coverage_analysis.py
-    if cve == "coverage":
-        continue
-
     baseline = bug[bug["config"] == "encrypted_bytes"]
     expmt = bug[bug["config"] == "ir-full-stack"]
     if baseline.empty or expmt.empty:
@@ -57,17 +41,8 @@ for (target, cve), bug in df.groupby(["target", "cve"]):
         event_observed_B=expmt["event"],
     )
 
-    def stats(g):
-        found = g[g["event"]]["duration"]
-        if found.empty:
-            return "—", "—"
-        return (
-            f"{found.median():.0f}",
-            f"{found.quantile(0.25):.0f}-{found.quantile(0.75):.0f}",
-        )
-
-    bm, biqr = stats(baseline)
-    em, eiqr = stats(expmt)
+    bm, biqr = format_median_iqr(baseline[baseline["event"]]["duration"])
+    em, eiqr = format_median_iqr(expmt[expmt["event"]]["duration"])
 
     records.append(
         dict(
@@ -95,7 +70,7 @@ if records:
 
     print("\n=== Primary comparison (encrypted_bytes vs ir-full-stack) ===")
     print(results.to_string(index=False))
-    results.to_csv(OUTPUT / "survival_primary_results.csv", index=False)
+    results.to_csv(OUTPUT_DIR / "survival_primary_results.csv", index=False)
 
     # ── Kaplan-Meier plots ────────────────────────────────────────────────────────
     for _, row in results.iterrows():
@@ -114,7 +89,6 @@ if records:
             if grp.empty:
                 continue
             kmf.fit(grp["duration"], grp["event"], label=label)
-            # Plot step function where y is "probability of NOT finding the bug yet"
             kmf.plot_survival_function(ax=ax, ci_show=True, linewidth=2)
 
         sig = " *" if row["Significant"] else ""
@@ -127,9 +101,8 @@ if records:
         ax.set_ylim(0, 1.05)
         plt.tight_layout()
 
-        # Save as PNG so it embeds correctly in Markdown
         plot_filename = f"km_{target.lower()}_{cve.lower()}.png"
-        plt.savefig(OUTPUT / plot_filename, dpi=300)
+        plt.savefig(OUTPUT_DIR / plot_filename, dpi=300)
         plt.close()
         generated_plots.append((target, cve, plot_filename))
 else:
@@ -144,8 +117,6 @@ ab_df = df[df["config"].isin(ablation_configs)]
 if not ab_df.empty:
     ab_records = []
     for (target, cve), bug in ab_df.groupby(["target", "cve"]):
-        if cve == "coverage":
-            continue
         for a, b in [
             ("ir-full-stack", "ir-component-a"),
             ("ir-full-stack", "ir-component-b"),
@@ -172,14 +143,13 @@ if not ab_df.empty:
         ab_results["Adj_p"] = ab_corr
         print("\n=== Ablation (exploratory) ===")
         print(ab_results.to_string(index=False))
-        ab_results.to_csv(OUTPUT / "survival_ablation_results.csv", index=False)
+        ab_results.to_csv(OUTPUT_DIR / "survival_ablation_results.csv", index=False)
 
 
 # ── Generate Markdown Report ──────────────────────────────────────────────────
 if records:
-    report_path = OUTPUT / "survival_evaluation_report.md"
+    report_path = OUTPUT_DIR / "survival_evaluation_report.md"
 
-    # Format a clean view for the markdown table
     view_cols = [
         "Target",
         "CVE",
@@ -194,7 +164,6 @@ if records:
     ]
     df_view = results[view_cols].copy()
 
-    # Prettify column headers
     df_view.columns = [
         "Target",
         "CVE",
