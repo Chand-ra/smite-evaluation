@@ -1,0 +1,9 @@
+{
+  "cve": "coverage",
+  "target": "eclair",
+  "buggy_commit": "<latest_stable_commit_hash>", 
+  "patch_commit": null,
+  "sanitizer": null,
+  "flag_identifier": null,
+  "poc_found_by_config": null
+}

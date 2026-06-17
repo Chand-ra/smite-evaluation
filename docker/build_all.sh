@@ -22,7 +22,10 @@ for meta_file in "$VULNS_DIR"/*/*/metadata.json; do
     target=$(python3 -c "import json,sys; print(json.load(open('$meta_file'))['target'])")
     cve=$(python3 -c "import json,sys; print(json.load(open('$meta_file'))['cve'])")
     commit=$(python3 -c "import json,sys; print(json.load(open('$meta_file'))['buggy_commit'])")
-    patch="${target}/${cve}/flag.patch"
+    patch=""
+    if [ -s "$VULNS_DIR/$target/$cve/flag.patch" ]; then
+        patch="${target}/${cve}/flag.patch"
+    fi
 
     for scenario in "${SCENARIOS[@]}"; do
         image="smite-eval-${target}-${cve,,}-${scenario}"

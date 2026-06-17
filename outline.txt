@@ -5,9 +5,11 @@ smite-evaluation/
 ├── Effectiveness Evaluation Framework.md # ground-truth methodology and evaluation design
 ├── vulnerabilities/
 │   ├── cln/
-│   │   ├── CVE-2023-XXXX/
+│   │   ├── CVE-2023-XXXX/            # Standard TTE Bug
 │   │   │   ├── flag.patch            # diff that inserts the stderr diagnostic abort()/panic
 │   │   │   └── metadata.json         # CVE number, commit hash, flag identifier
+│   │   ├── coverage/                 # Coverage Pseudo-Bug
+│   │   │   └── metadata.json         # points to latest stable commit with null crash targets
 │   │   └── ...
 │   ├── lnd/
 │   ├── ldk/
@@ -15,6 +17,7 @@ smite-evaluation/
 │   │   │   ├── smite.patch           # special patch required by LDK: modifies workloads/ldk/Cargo.toml and/or src/main.rs
 │   │   │   ├── flag.patch
 │   │   │   └── metadata.json
+│   │   └── coverage/
 │   └── eclair/
 ├── docker/
 │   ├── build_all.sh
@@ -27,13 +30,13 @@ smite-evaluation/
 │   ├── encrypted_bytes/              # 5 generic seeds (empty + 4 messages)
 │   └── ir/                           # 5 generic IR programs
 ├── orchestrator/
-│   ├── run_trial.py                  # launches AFL++, monitors stderr via docker, records TTE
-│   └── scheduler.py                  # core-pinning, parallel execution, live TUI dashboard
+│   ├── run_trial.py                  # launches AFL++, monitors stderr via docker, records TTE/Coverage
+│   └── scheduler.py                  # core-pinning, parallel execution, live TUI dashboard, mode routing
 ├── analysis/
 │   ├── output/                       # Final analysis results (gitignored)
 │   ├── requirements.txt              # pip dependencies for analysis scripts
-│   ├── survival_analysis.py          # Kaplan-Meier, log-rank, Holm-Bonferroni
-│   ├── coverage_analysis.py          # Mann-Whitney, Vargha-Delaney, IQR
+│   ├── survival_analysis.py          # Kaplan-Meier, log-rank, Holm-Bonferroni (for TTE)
+│   ├── coverage_analysis.py          # Mann-Whitney, Vargha-Delaney, IQR (for Coverage)
 │   ├── utils.py                      # data ingestion helpers
 │   └── README.md                     # instructions to reproduce all plots/tables
 ├── docs/
@@ -41,9 +44,9 @@ smite-evaluation/
 │
 └── results/
     ├── README.md                     # describes the folder schema, data formats
-    ├── trials.csv                    # global trial manifest: one row per trial
+    ├── trials.csv                    # global trial manifest: one row per TTE trial (Coverage excluded)
     ├── cln/
-    │   ├── CVE-2023-XXXX/
+    │   ├── CVE-2023-XXXX/            # TTE Campaign Results
     │   │   ├── encrypted_bytes/
     │   │   │   ├── trial-01/
     │   │   │   │   ├── afl-fuzz-attempt-01.log  # stdout/stderr from AFL++ forkserver
@@ -60,13 +63,22 @@ smite-evaluation/
     │   │   └── ir-full-stack/
     │   │       ├── trial-01/
     │   │       └── ...
+    │   └── coverage/                 # Coverage Campaign Results
+    │       ├── encrypted_bytes/
+    │       │   ├── trial-01/
+    │       │   │   ├── afl-fuzz-attempt-01.log
+    │       │   │   ├── afl-out/
+    │       │   │   └── status.txt               # explicitly says "COMPLETE" (protects against truncation)
+    │       │   └── ...
+    │       └── ir-full-stack/
     ├── lnd/
     ├── ldk/
     └── eclair/
 
 
-## vulnerabilities metadata.json schema
+## vulnerabilities metadata.json schemas
 
+# 1. Standard TTE Bug Schema
 {
   "cve": "CVE-2023-XXXX",
   "target": "cln",

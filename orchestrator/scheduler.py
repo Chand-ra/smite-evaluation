@@ -9,7 +9,8 @@ Usage:
         --smite-dir ~/smite \
         --afl-dir ~/AFLplusplus \
         [--trials 20] \
-        [--targets cln,lnd,ldk,eclair]
+        [--targets cln,lnd,ldk,eclair] \
+        [--coverage]
 
 Ablation workflow:
     Compile the appropriate mutator variant, place it at
@@ -68,20 +69,35 @@ def parse_args():
     p.add_argument("--afl-dir", required=True, type=Path)
     p.add_argument("--trials", type=int, default=20)
     p.add_argument("--targets", default=None)
+    p.add_argument(
+        "--coverage",
+        action="store_true",
+        help="Run 24h baseline coverage campaigns instead of TTE bug trials.",
+    )
     return p.parse_args()
 
 
 # ── Bug loading ────────────────────────────────────────────────────────────────
 
 
-def load_bugs(target_filter=None) -> list[dict]:
+def load_bugs(target_filter=None, is_coverage=False) -> list[dict]:
     bugs = []
     for path in sorted((EVAL_DIR / "vulnerabilities").rglob("metadata.json")):
         with open(path) as f:
             meta = json.load(f)
         meta["_meta_path"] = str(path)
-        if target_filter is None or meta["target"] in target_filter:
-            bugs.append(meta)
+
+        if target_filter is not None and meta["target"] not in target_filter:
+            continue
+
+        # Filter by campaign mode
+        is_coverage_bug = meta.get("cve") == "coverage"
+        if is_coverage and not is_coverage_bug:
+            continue
+        if not is_coverage and is_coverage_bug:
+            continue
+
+        bugs.append(meta)
     return bugs
 
 
@@ -129,6 +145,8 @@ def ensure_sharedir(meta: dict, config: str, smite_dir: Path, afl_dir: Path) -> 
 def append_csv_row(target, cve, config, trial_num, tte, censored):
     csv_path = EVAL_DIR / "results" / "trials.csv"
     csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # 1. Isolate the disk I/O lock
     with CSV_LOCK:
         write_header = not csv_path.exists()
         with open(csv_path, "a", newline="") as f:
@@ -147,6 +165,9 @@ def append_csv_row(target, cve, config, trial_num, tte, censored):
                     censored,
                 ]
             )
+
+    # 2. Isolate the memory state lock
+    with STATE_LOCK:
         PROGRESS["completed"] += 1
 
 
@@ -176,6 +197,7 @@ def worker(
                         "edges": 0,
                         "crash_count": 0,
                         "start_time": 0.0,
+                        "is_active": False,
                     }
                 )
             return
@@ -198,6 +220,7 @@ def worker(
                     "edges": 0,
                     "crash_count": 0,
                     "start_time": start_time,
+                    "is_active": True,
                 }
             )
             SUMMARY[config]["in_progress"] += 1
@@ -274,7 +297,9 @@ def worker(
         threading.Thread(target=poll_metrics, daemon=True).start()
 
         # ── Output parser ──────────────────────────────────────────────────────
+        coverage_status = None
         completed_normally = False
+
         for line in process.stdout:
             line = line.strip()
             if not line:
@@ -288,13 +313,11 @@ def worker(
                     core_states[core]["color"] = "yellow"
                 elif "[running]" in line:
                     core_states[core]["status"] = "Fuzzing..."
-                    core_states[core]["color"]  = "cyan"
+                    core_states[core]["color"] = "cyan"
                 elif "[warn] afl-fuzz exited early" in line:
                     core_states[core]["status"] = "AFL exited early"
                     core_states[core]["color"] = "bold red"
                 elif "[retry]" in line:
-                    # Extract reason and delay from lines like:
-                    #   [retry] mid-campaign early exit (attempt 1/6), retrying in 150s
                     m = re.search(
                         r"\[retry\]\s+(.+?)\s+\((attempt\s+\d+/\d+)\),\s+retrying\s+in\s+(\d+)s",
                         line,
@@ -313,39 +336,65 @@ def worker(
                     res = line.split()[-1]
                     core_states[core]["status"] = f"Done: {res}"
                     core_states[core]["color"] = (
-                        "bold green" if "TTE=" in res else "red"
+                        "bold green" if ("TTE=" in res or res == "COMPLETE") else "red"
                     )
+                    core_states[core]["is_active"] = False
+                    core_states[core]["elapsed"] = (
+                        time.time() - core_states[core]["start_time"]
+                    )
+
                     completed_normally = True
+                    if cve == "coverage":
+                        coverage_status = res
 
         process.wait()
 
         # ── Record result ──────────────────────────────────────────────────────
-        tte_file = trial_dir / "tte.txt"
-        tte, censored = None, True
-        if tte_file.exists():
-            content = tte_file.read_text().strip()
-            if content != "CENSORED":
-                try:
-                    tte = float(content)
-                    censored = False
-                except ValueError:
-                    pass
+        if cve != "coverage":
+            tte_file = trial_dir / "tte.txt"
+            tte, censored = None, True
+            if tte_file.exists():
+                content = tte_file.read_text().strip()
+                if content != "CENSORED":
+                    try:
+                        tte = float(content)
+                        censored = False
+                    except ValueError:
+                        pass
 
-        append_csv_row(target, cve, config, trial_num, tte, censored)
+            # PROGRESS["completed"] is safely incremented inside this function
+            append_csv_row(target, cve, config, trial_num, tte, censored)
+        else:
+            with STATE_LOCK:
+                PROGRESS["completed"] += 1
 
         with STATE_LOCK:
             SUMMARY[config]["in_progress"] -= 1
             ts = time.strftime("%H:%M:%S")
             if completed_normally:
-                if censored:
-                    SUMMARY[config]["censored"] += 1
-                    EVENT_LOG.append(f"[[cyan]{ts}[/]] {task_name} → [red]CENSORED[/]")
+                if cve != "coverage":
+                    if not censored:
+                        SUMMARY[config]["found"] += 1
+                        EVENT_LOG.append(
+                            f"[[cyan]{ts}[/]] {task_name} → "
+                            f"[bold green]FOUND ({tte:.1f}s)[/]"
+                        )
+                    else:
+                        SUMMARY[config]["censored"] += 1
+                        EVENT_LOG.append(
+                            f"[[cyan]{ts}[/]] {task_name} → [red]CENSORED[/]"
+                        )
                 else:
-                    SUMMARY[config]["found"] += 1
-                    EVENT_LOG.append(
-                        f"[[cyan]{ts}[/]] {task_name} → "
-                        f"[bold green]FOUND ({tte:.1f}s)[/]"
-                    )
+                    if coverage_status == "COMPLETE":
+                        SUMMARY[config]["found"] += 1
+                        EVENT_LOG.append(
+                            f"[[cyan]{ts}[/]] {task_name} → [bold green]FINISHED[/]"
+                        )
+                    else:
+                        SUMMARY[config]["failed"] += 1
+                        EVENT_LOG.append(
+                            f"[[cyan]{ts}[/]] {task_name} → [bold red]INCOMPLETE[/]"
+                        )
             else:
                 SUMMARY[config]["failed"] += 1
                 EVENT_LOG.append(f"[[cyan]{ts}[/]] {task_name} → [bold red]FAILED[/]")
@@ -368,17 +417,19 @@ def _snapshot_state(core_states: dict) -> tuple[dict, dict, list, dict, float]:
     return cores_snap, summary_snap, events_snap, progress_snap
 
 
-def generate_dashboard(core_states: dict) -> Group:
+def generate_dashboard(core_states: dict, is_coverage: bool) -> Group:
     cores_snap, summary_snap, events_snap, progress_snap = _snapshot_state(core_states)
 
     completed = progress_snap["completed"]
     total = progress_snap["total"]
     elapsed = time.time() - START_TIME
 
+    mode_str = "COVERAGE" if is_coverage else "TTE"
+
     # ── Per-core table ─────────────────────────────────────────────────────────
     core_table = Table(
         title=(
-            f"Smite Orchestrator  "
+            f"Smite Orchestrator ([bold yellow]{mode_str} Mode[/])  "
             f"[cyan]{completed}[/]/[cyan]{total}[/] trials  "
             f"Elapsed [cyan]{_fmt_duration(elapsed)}[/]  "
         ),
@@ -417,7 +468,7 @@ def generate_dashboard(core_states: dict) -> Group:
     )
     summary_table.add_column("Config")
     summary_table.add_column("Total", justify="right")
-    summary_table.add_column("Found", justify="right", style="bold green")
+    summary_table.add_column("Success/Found", justify="right", style="bold green")
     summary_table.add_column("Censored", justify="right", style="red")
     summary_table.add_column("In-Progress", justify="right", style="cyan")
     summary_table.add_column("Failed", justify="right", style="bold red")
@@ -461,9 +512,13 @@ def main():
     configs = [c.strip() for c in args.configs.split(",")]
     targets = [t.strip() for t in args.targets.split(",")] if args.targets else None
 
-    bugs = load_bugs(targets)
+    bugs = load_bugs(targets, args.coverage)
     if not bugs:
-        print("No bugs found under vulnerabilities/.", file=sys.stderr)
+        mode_name = "Coverage" if args.coverage else "TTE"
+        print(
+            f"No {mode_name} configurations found under vulnerabilities/.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     console = Console()
@@ -530,6 +585,7 @@ def main():
             "edges": 0,
             "crash_count": 0,
             "start_time": 0.0,
+            "is_active": False,
         }
         for c in cores
     }
@@ -546,14 +602,14 @@ def main():
     ]
 
     with Live(
-        generate_dashboard(core_states),
+        generate_dashboard(core_states, args.coverage),
         refresh_per_second=4,
         console=console,
     ) as live:
         for t in threads:
             t.start()
         while any(t.is_alive() for t in threads):
-            live.update(generate_dashboard(core_states))
+            live.update(generate_dashboard(core_states, args.coverage))
             time.sleep(0.25)
         for t in threads:
             t.join()

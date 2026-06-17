@@ -1,6 +1,7 @@
-lifelines>=0.27
-pandas>=2.0
-matplotlib>=3.7
-scipy>=1.10
-statsmodels>=0.14
-numpy>=1.24
+lifelines>=0.27.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+scipy>=1.10.0
+statsmodels>=0.14.0
+numpy>=2.0.0
