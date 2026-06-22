@@ -1,0 +1,9 @@
+{
+  "cve": "htlc_limit",
+  "target": "cln",
+  "buggy_commit": "a7af1063212b05c9dd4cf6bddb58d8cc9c917e8b",
+  "patch_commit": "3fd22f86df959ab248b66350bb7a9eaa1a2f7e27",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_HTLC_LIMIT",
+  "poc_found_by_config": []
+}

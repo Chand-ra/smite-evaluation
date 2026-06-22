@@ -1,0 +1,19 @@
+diff --git a/channeld/full_channel.c b/channeld/full_channel.c
+index 4001a1faa..9d2b3376a 100644
+--- a/channeld/full_channel.c
++++ b/channeld/full_channel.c
+@@ -581,6 +581,14 @@ static enum channel_add_err add_htlc(struct channel *channel,
+ 	min_concurrent_htlcs = channel->config[recipient].max_accepted_htlcs;
+ 	if (min_concurrent_htlcs > channel->config[sender].max_accepted_htlcs)
+ 		min_concurrent_htlcs = channel->config[sender].max_accepted_htlcs;
++
++	if (sender == REMOTE &&
++	    (tal_count(committed) - tal_count(removing) + tal_count(adding)) > channel->config[REMOTE].max_accepted_htlcs &&
++	    (tal_count(committed) - tal_count(removing) + tal_count(adding)) <= channel->config[LOCAL].max_accepted_htlcs) {
++		fprintf(stderr, "SMITE_FLAG_HTLC_LIMIT\n");
++		abort();
++	}
++
+ 	if (tal_count(committed) - tal_count(removing) + tal_count(adding)
+ 	    > min_concurrent_htlcs) {
+ 		return CHANNEL_ERR_TOO_MANY_HTLCS;

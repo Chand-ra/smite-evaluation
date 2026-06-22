@@ -1,0 +1,9 @@
+{
+  "cve": "gossmap_load",
+  "target": "cln",
+  "buggy_commit": "eea4781606cfe7387bb9a594a9586b4911fecb03",
+  "patch_commit": "a104380e49676e5b517f5c8ec72d414ceaef327f",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_GOSSMAP_LOAD",
+  "poc_found_by_config": []
+}

@@ -1,0 +1,24 @@
+diff --git a/gossipd/gossmap_manage.c b/gossipd/gossmap_manage.c
+index 20eb9ab47..4ed4343f2 100644
+--- a/gossipd/gossmap_manage.c
++++ b/gossipd/gossmap_manage.c
+@@ -21,6 +21,7 @@
+ #include <gossipd/sigcheck.h>
+ #include <gossipd/txout_failures.h>
+ #include <string.h>
++#include <stdio.h>
+ 
+ struct pending_cannounce {
+ 	const u8 *scriptpubkey;
+@@ -1183,6 +1184,11 @@ void gossmap_manage_new_block(struct gossmap_manage *gm, u32 new_blockheight)
+ 		if (gm->dying_channels[i].deadline > new_blockheight)
+ 			continue;
+ 
++		if (gossmap != gossmap_manage_get_gossmap(gm)) {
++			fprintf(stderr, "SMITE_FLAG_STALE_GOSSMAP\n");
++			abort();
++		}
++
+ 		kill_spent_channel(gm, gossmap, gm->dying_channels[i].scid);
+ 		gossip_store_del(gm->daemon->gs,
+ 				 gm->dying_channels[i].gossmap_offset,

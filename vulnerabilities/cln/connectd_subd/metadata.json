@@ -1,0 +1,9 @@
+{
+  "cve": "connectd_subd",
+  "target": "cln",
+  "buggy_commit": "9039c9c46e44d57fd120b449f8904b2a479bc4c0",
+  "patch_commit": "4343f720be8d67787426686ddc25bf64f803984f",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_CONNECTD_SUBD",
+  "poc_found_by_config": []
+}

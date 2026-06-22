@@ -1,0 +1,20 @@
+diff --git a/hsmd/libhsmd.c b/hsmd/libhsmd.c
+index 7ce12bc08..7f9c601db 100644
+--- a/hsmd/libhsmd.c
++++ b/hsmd/libhsmd.c
+@@ -15,6 +15,7 @@
+ #include <secp256k1_schnorrsig.h>
+ #include <sodium/utils.h>
+ #include <wally_psbt.h>
++#include <stdio.h>
+ 
+ /* The negotiated protocol version ends up in here. */
+ u64 hsmd_mutual_version;
+@@ -397,6 +398,7 @@ static u8 *handle_setup_channel(struct hsmd_client *c, const u8 *msg_in)
+ 	/* Fail fast if any values are uninitialized or obviously wrong. */
+ 	assert(amount_sat_greater(channel_value, AMOUNT_SAT(0)));
+ 	assert(amount_sat_to_msat(&value_msat, channel_value));
++	fprintf(stderr, "SMITE_FLAG_FUNDING_CREATED");
+ 	assert(!mem_is_zero(&funding_txid, sizeof(funding_txid)));
+ 	assert(local_to_self_delay > 0);
+ 	assert(remote_to_self_delay > 0);

@@ -1,0 +1,24 @@
+diff --git a/lightningd/channel_gossip.c b/lightningd/channel_gossip.c
+index a7f123d1f..045356805 100644
+--- a/lightningd/channel_gossip.c
++++ b/lightningd/channel_gossip.c
+@@ -14,6 +14,7 @@
+ #include <lightningd/lightningd.h>
+ #include <lightningd/peer_control.h>
+ #include <lightningd/subd.h>
++#include <stdio.h>
+ 
+ enum channel_gossip_state {
+ 	/* Not a public channel */
+@@ -78,6 +79,11 @@ static bool channel_announceable(const struct channel *channel,
+ 
+ static void check_channel_gossip(const struct channel *channel)
+ {
++
++	if (channel->channel_gossip->refresh_timer && channel->channel_gossip->state != CGOSSIP_ANNOUNCED) {
++		fprintf(stderr, "SMITE_FLAG_EARLY_CUPDATE\n");
++		abort();
++	}
+ 	struct channel_gossip *cg = channel->channel_gossip;
+ 
+ 	/* Note: we can't assert is_scid_depth_announceable, for two reasons:

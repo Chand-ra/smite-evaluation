@@ -1,0 +1,9 @@
+{
+  "cve": "feerate_update",
+  "target": "cln",
+  "buggy_commit": "b0377d2323238e80734fc3c07cf63cefeea61b3d",
+  "patch_commit": "a9aa93d8222e065b8c9c7c792044cd90f8487e89",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_FEERATE_UPDATE",
+  "poc_found_by_config": []
+}

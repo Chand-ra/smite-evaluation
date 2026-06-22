@@ -1,0 +1,21 @@
+diff --git a/common/wireaddr.c b/common/wireaddr.c
+index 484dd830c..82f85eeea 100644
+--- a/common/wireaddr.c
++++ b/common/wireaddr.c
+@@ -10,6 +10,7 @@
+ #include <netdb.h>
+ #include <netinet/in.h>
+ #include <wire/wire.h>
++#include <stdio.h>
+ 
+ bool wireaddr_eq(const struct wireaddr *a, const struct wireaddr *b)
+ {
+@@ -48,6 +49,8 @@ bool fromwire_wireaddr(const u8 **cursor, size_t *max, struct wireaddr *addr)
+ 	case ADDR_TYPE_DNS:
+ 		addr->addrlen = fromwire_u8(cursor, max);
+ 		memset(&addr->addr, 0, sizeof(addr->addr));
++		if (addr->addrlen == 255)
++			fprintf(stderr, "SMITE_FLAG_DNS_OVERFLOW\n");
+ 		addr->addr[addr->addrlen] = 0;
+ 		break;
+ 	default:

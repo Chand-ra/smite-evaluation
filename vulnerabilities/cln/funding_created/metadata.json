@@ -1,0 +1,9 @@
+{
+  "cve": "funding_created",
+  "target": "cln",
+  "buggy_commit": "ed2b0eff9ab024e2d0f77f07502b4b4790e628a2",
+  "patch_commit": "2c26d1c44459f0060d47ed1b389ceb4a095ce492",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_FUNDING_CREATED",
+  "poc_found_by_config": []
+}

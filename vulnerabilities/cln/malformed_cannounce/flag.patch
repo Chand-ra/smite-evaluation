@@ -1,0 +1,24 @@
+diff --git a/gossipd/gossmap_manage.c b/gossipd/gossmap_manage.c
+index 4cedf2117..57744fc2d 100644
+--- a/gossipd/gossmap_manage.c
++++ b/gossipd/gossmap_manage.c
+@@ -28,6 +28,7 @@
+ #include <sys/stat.h>
+ #include <sys/wait.h>
+ #include <unistd.h>
++#include <stdio.h>
+ 
+ #define PENDING_LIMIT 10000
+ #define GOSSIP_STORE_COMPACT_FILENAME "gossip_store.compact"
+@@ -648,6 +649,11 @@ const char *gossmap_manage_channel_announcement(const tal_t *ctx,
+ 			       tal_hex(tmpctx, announce));
+ 	}
+ 
++	if (!(node_id_cmp(&node_id_1, &node_id_2) < 0)) {
++		fprintf(stderr, "SMITE_FLAG_MALFORMED_CANNOUNCE");
++		abort();
++	}
++
+ 	/* If a prior txout lookup failed there is little point it trying
+ 	 * again. Just drop the announcement and walk away whistling.
+ 	 *

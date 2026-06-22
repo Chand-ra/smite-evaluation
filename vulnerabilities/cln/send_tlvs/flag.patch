@@ -1,0 +1,21 @@
+diff --git a/channeld/channeld.c b/channeld/channeld.c
+index 3e13959c4..5bfc4d286 100644
+--- a/channeld/channeld.c
++++ b/channeld/channeld.c
+@@ -50,6 +50,7 @@
+ #include <wally_bip32.h>
+ #include <wire/peer_wire.h>
+ #include <wire/wire_sync.h>
++#include <stdio.h>
+ 
+ /* stdin == requests, 3 == peer, 4 = HSM */
+ #define MASTER_FD STDIN_FILENO
+@@ -5159,6 +5160,8 @@ static void peer_reconnect(struct peer *peer,
+ 		   || pending_updates(peer->channel, REMOTE, true)) {
+ 		status_debug("No upgrade: pending changes");
+ 	} else {
++		if (!send_tlvs || !recv_tlvs)
++			fprintf(stderr, "SMITE_FLAG_SEND_TLVS\n");
+ 		const struct tlv_channel_reestablish_tlvs *initr, *ninitr;
+ 		const u8 *type;
+ 
