@@ -52,6 +52,7 @@ RUN if [ -n "$COMMIT_HASH" ]; then \
 
 ARG FLAG_PATCH=""
 COPY smite-evaluation/vulnerabilities/ /smite-vulns/
+RUN cd /lnd && go mod vendor
 RUN if [ -n "$FLAG_PATCH" ]; then \
         git -C /lnd apply "/smite-vulns/$FLAG_PATCH"; \
     fi

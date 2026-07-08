@@ -1,0 +1,14 @@
+diff --git a/lightning/src/ln/channelmanager.rs b/lightning/src/ln/channelmanager.rs
+index b2b28cdf3..d2a7206d7 100644
+--- a/lightning/src/ln/channelmanager.rs
++++ b/lightning/src/ln/channelmanager.rs
+@@ -6170,6 +6170,9 @@ where
+ 
+ 		// If we're doing manual acceptance checks on the channel, then defer creation until we're sure we want to accept.
+ 		if self.default_configuration.manually_accept_inbound_channels {
++			if msg.channel_type.is_none() {
++				panic!("SMITE_FLAG_REACHABLE_UNWRAP");
++			}
+ 			let mut pending_events = self.pending_events.lock().unwrap();
+ 			pending_events.push_back((events::Event::OpenChannelRequest {
+ 				temporary_channel_id: msg.temporary_channel_id.clone(),

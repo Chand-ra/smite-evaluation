@@ -1,0 +1,18 @@
+diff --git a/funding/manager.go b/funding/manager.go
+index 417ad9cff..603545422 100644
+--- a/funding/manager.go
++++ b/funding/manager.go
+@@ -1438,6 +1438,13 @@ func (f *Manager) ProcessFundingMsg(msg lnwire.Message, peer lnpeer.Peer) {
+ func (f *Manager) fundeeProcessOpenChannel(peer lnpeer.Peer,
+ 	msg *lnwire.OpenChannel) {
+ 
++	pushSat := uint64(msg.PushAmount) / 1000
++	pushSubSat := uint64(msg.PushAmount) % 1000
++	fundingSat := uint64(msg.FundingAmount)
++
++	if pushSat > fundingSat || (pushSat == fundingSat && pushSubSat > 0) {
++		panic("SMITE_FLAG_PUSH_OVERFLOW\n")
++	}
+ 	// Check number of pending channels to be smaller than maximum allowed
+ 	// number and send ErrorGeneric to remote peer if condition is
+ 	// violated.

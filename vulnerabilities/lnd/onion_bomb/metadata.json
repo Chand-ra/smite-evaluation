@@ -1,0 +1,9 @@
+{
+  "cve": "onion_bomb",
+  "target": "lnd",
+  "buggy_commit": "6bd30047c1b1188029e8af6ee8a135cf86e7dc4b", 
+  "patch_commit": "6bd30047c1b1188029e8af6ee8a135cf86e7dc4b",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_ONION_BOMB",
+  "poc_found_by_config": []
+}

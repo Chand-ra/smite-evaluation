@@ -1,0 +1,9 @@
+{
+  "cve": "reachable_unwrap",
+  "target": "ldk",
+  "buggy_commit": "c9cd694d40a4411273bb764779e37b06cc23a724",
+  "patch_commit": "bed4a0ebe91b9233232b94633f4f96cedc97fc24",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_REACHABLE_UNWRAP",
+  "poc_found_by_config": []
+}

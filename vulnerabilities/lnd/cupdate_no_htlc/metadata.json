@@ -1,0 +1,9 @@
+{
+  "cve": "cupdate_no_htlc",
+  "target": "lnd",
+  "buggy_commit": "581e195bfe4580348d7672d59bad4c4335195102",
+  "patch_commit": "6459385dfdc8d9e4a4aafa6ce58bc42823531851",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_CUPDATE_NO_HTLC",
+  "poc_found_by_config": []
+}

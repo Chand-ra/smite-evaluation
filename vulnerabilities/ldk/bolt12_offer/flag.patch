@@ -1,0 +1,19 @@
+diff --git a/lightning/src/offers/invoice_request.rs b/lightning/src/offers/invoice_request.rs
+index fa3d9161b..8da29bfe6 100644
+--- a/lightning/src/offers/invoice_request.rs
++++ b/lightning/src/offers/invoice_request.rs
+@@ -944,7 +944,13 @@ impl VerifiedInvoiceRequest {
+ 			payer_id: *payer_id,
+ 			quantity: *quantity,
+ 			payer_note_truncated: payer_note.clone()
+-				.map(|mut s| { s.truncate(PAYER_NOTE_LIMIT); UntrustedString(s) }),
++				.map(|mut s| {
++					if PAYER_NOTE_LIMIT < s.len() && !s.is_char_boundary(PAYER_NOTE_LIMIT) {
++						eprintln!("SMITE_FLAG_BOLT12_OFFER");
++					}
++					s.truncate(PAYER_NOTE_LIMIT);
++					UntrustedString(s)
++				}),
+ 		}
+ 	}
+ }

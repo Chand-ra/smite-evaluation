@@ -1,0 +1,13 @@
+diff --git a/lightning/src/ln/channelmanager.rs b/lightning/src/ln/channelmanager.rs
+index b22c3716c..697e824bd 100644
+--- a/lightning/src/ln/channelmanager.rs
++++ b/lightning/src/ln/channelmanager.rs
+@@ -4883,6 +4883,8 @@ where
+ 									update: monitor_update.clone(),
+ 								});
+ 						}
++					} else if let UpdateFulfillCommitFetch::DuplicateClaim {} = fulfill_res {
++						panic!("SMITE_FLAG_HTLC_DUPLICATE_HANG");
+ 					}
+ 					return Ok(());
+ 				}

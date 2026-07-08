@@ -1,0 +1,9 @@
+{
+  "cve": "zero_timestamp",
+  "target": "lnd",
+  "buggy_commit": "eea4840086a5da9e8b9076f4b2ba992e0d71f1fa",
+  "patch_commit": "cad1b957bfa2bc2c524d4c930470ce2b55ae8a11",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_ZERO_TIMESTAMP",
+  "poc_found_by_config": []
+}

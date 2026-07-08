@@ -1,0 +1,14 @@
+diff --git a/lightning/src/ln/channel.rs b/lightning/src/ln/channel.rs
+index e559ac335..2a248d5a0 100644
+--- a/lightning/src/ln/channel.rs
++++ b/lightning/src/ln/channel.rs
+@@ -1617,6 +1617,9 @@ impl<Signer: ChannelSigner> ChannelContext<Signer> {
+ 				balance_msat += htlc.amount_msat;
+ 			}
+ 		}
++		if balance_msat < outbound_stats.pending_htlcs_value_msat {
++			panic!("SMITE_FLAG_BALANCE_UNDERFLOW");
++		}
+ 		balance_msat -= outbound_stats.pending_htlcs_value_msat;
+ 
+ 		let outbound_capacity_msat = context.value_to_self_msat

@@ -1,0 +1,12 @@
+diff --git a/lightning/src/ln/channel.rs b/lightning/src/ln/channel.rs
+index e533e532f..80d557711 100644
+--- a/lightning/src/ln/channel.rs
++++ b/lightning/src/ln/channel.rs
+@@ -2501,6 +2501,7 @@ impl<Signer: WriteableEcdsaChannelSigner> Channel<Signer> {
+ 				} else if self.cur_counterparty_commitment_transaction_number == INITIAL_COMMITMENT_NUMBER - 2 {
+ 					// If we've advanced the commitment number once, the second commitment point is
+ 					// at `counterparty_prev_commitment_point`, which is not yet revoked.
++					panic!("SMITE_FLAG_CHANNEL_READY");
+ 					debug_assert!(self.counterparty_prev_commitment_point.is_some());
+ 					self.counterparty_prev_commitment_point
+ 				} else {

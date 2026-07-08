@@ -1,0 +1,9 @@
+{
+  "cve": "negotiating_shutdown",
+  "target": "eclair",
+  "buggy_commit": "9f2b0368c70e62351ff880044a6a0af946fdaa72",
+  "patch_commit": "4cde8c555fe2a16f98fb1ba412a031229c604cc9",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_NEGOTIATING_SHUTDOWN",
+  "poc_found_by_config": []
+}

@@ -1,8 +1,0 @@
-{
-  "cve": "fake",
-  "target": "cln",
-  "buggy_commit": "61bf4ffc35dfe04799fcaedc6cfed62a71a2f611",
-  "patch_commit": "89c42019186e2b21e1b805c33652b00f69ec425a",
-  "sanitizer": "abort",
-  "flag_identifier": "SMITE_FLAG_FAKE"
-}

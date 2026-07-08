@@ -1,0 +1,15 @@
+diff --git a/routing/ann_validation.go b/routing/ann_validation.go
+index 6a84aa610..78f006efc 100644
+--- a/routing/ann_validation.go
++++ b/routing/ann_validation.go
+@@ -165,6 +165,10 @@ func VerifyChannelUpdateSignature(msg *lnwire.ChannelUpdate,
+ func validateOptionalFields(capacity btcutil.Amount,
+ 	msg *lnwire.ChannelUpdate) error {
+ 
++	if !msg.MessageFlags.HasMaxHtlc() {
++		panic("SMITE_FLAG_CUPDATE_NO_HTLC\n")
++	}
++
+ 	if msg.MessageFlags.HasMaxHtlc() {
+ 		maxHtlc := msg.HtlcMaximumMsat
+ 		if maxHtlc == 0 || maxHtlc < msg.HtlcMinimumMsat {

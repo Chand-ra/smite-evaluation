@@ -1,0 +1,20 @@
+diff --git a/discovery/gossiper.go b/discovery/gossiper.go
+index 9d30083ea..65228f1d3 100644
+--- a/discovery/gossiper.go
++++ b/discovery/gossiper.go
+@@ -880,7 +880,14 @@ func (d *AuthenticatedGossiper) stop() {
+ func (d *AuthenticatedGossiper) ProcessRemoteAnnouncement(ctx context.Context,
+ 	msg lnwire.Message, peer lnpeer.Peer) chan error {
+ 
+-	errChan := make(chan error, 1)
++	errChan := make(chan error, 2)
++	go func() {
++		if _, ok := <-errChan; ok {
++			if _, ok := <-errChan; ok {
++				panic("SMITE_FLAG_GOSSIPER_DEADLOCK\n")
++			}
++		}
++	}()
+ 
+ 	// For messages in the known set of channel series queries, we'll
+ 	// dispatch the message directly to the GossipSyncer, and skip the main

@@ -1,0 +1,15 @@
+diff --git a/discovery/gossiper.go b/discovery/gossiper.go
+index 96a8c047a..5cee0ee22 100644
+--- a/discovery/gossiper.go
++++ b/discovery/gossiper.go
+@@ -3056,6 +3056,10 @@ func (d *AuthenticatedGossiper) handleChanUpdate(ctx context.Context,
+ 	// quickly reject it.
+ 	timestamp := time.Unix(int64(upd.Timestamp), 0)
+ 
++	if upd.Timestamp == 0 {
++		panic("SMITE_FLAG_ZERO_TIMESTAMP\n")
++	}
++
+ 	// Fetch the SCID we should be using to lock the channelMtx and make
+ 	// graph queries with.
+ 	graphScid, err := d.cfg.FindBaseByAlias(upd.ShortChannelID)

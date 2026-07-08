@@ -1,0 +1,15 @@
+diff --git a/eclair-core/src/main/scala/fr/acinq/eclair/crypto/TransportHandler.scala b/eclair-core/src/main/scala/fr/acinq/eclair/crypto/TransportHandler.scala
+index ac6003d0a..27b76686b 100644
+--- a/eclair-core/src/main/scala/fr/acinq/eclair/crypto/TransportHandler.scala
++++ b/eclair-core/src/main/scala/fr/acinq/eclair/crypto/TransportHandler.scala
+@@ -185,6 +185,10 @@ class TransportHandler[T: ClassTag](keyPair: KeyPair, rs: Option[ByteVector], co
+         } else {
+           log.debug("read {} messages, waiting for readacks", plaintextMessages.size)
+           val unackedReceived = sendToListener(d.listener, plaintextMessages)
++          if (unackedReceived.isEmpty) {
++            System.err.println("SMITE_FLAG_UNKNOWN_MESSAGE")
++            Runtime.getRuntime().halt(1)
++          }
+           stay() using NormalData(d.encryptor, dec1, d.listener, d.sendBuffer, unackedReceived, d.unackedSent)
+         }
+ 

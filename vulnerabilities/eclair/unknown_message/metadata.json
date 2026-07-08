@@ -1,0 +1,9 @@
+{
+  "cve": "unknown_message",
+  "target": "eclair",
+  "buggy_commit": "08d2ad4a917aa31719ceb371dcf476a8adf650d7",
+  "patch_commit": "c9810d54246648c6177dfb92559e7ff6c9676ad6",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_UNKNOWN_MESSAGE",
+  "poc_found_by_config": []
+}

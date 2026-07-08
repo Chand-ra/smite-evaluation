@@ -1,0 +1,11 @@
+diff --git a/workloads/ldk/Cargo.toml b/workloads/ldk/Cargo.toml
+index 14ddbb1..066f2bc 100644
+--- a/workloads/ldk/Cargo.toml
++++ b/workloads/ldk/Cargo.toml
+@@ -9,5 +9,5 @@ edition = "2024"
+ panic = "abort"
+ 
+ [dependencies]
+-ldk-node = "0.7"
++ldk-node = { git = "https://github.com/lightningdevkit/ldk-node", rev = "972afcb5138332d86ccbf764a391c3544c12dc96" }
+ libc = "0.2"

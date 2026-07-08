@@ -1,0 +1,20 @@
+diff --git a/eclair-core/src/main/scala/fr/acinq/eclair/channel/Helpers.scala b/eclair-core/src/main/scala/fr/acinq/eclair/channel/Helpers.scala
+index cd872bdaf..05de7b095 100644
+--- a/eclair-core/src/main/scala/fr/acinq/eclair/channel/Helpers.scala
++++ b/eclair-core/src/main/scala/fr/acinq/eclair/channel/Helpers.scala
+@@ -1306,6 +1306,15 @@ object Helpers {
+             Set.empty
+         }
+       } else if (nextRemoteCommit_opt.map(_.txid).contains(tx.txid)) {
++        val settledHtlcs = remoteCommit.spec.htlcs.collect(incoming) -- nextRemoteCommit_opt.map(_.spec.htlcs.collect(incoming)).getOrElse(Set.empty)
++        val failedHtlcs = d.commitments.latest.changes.remoteChanges.all.collect {
++          case f: UpdateFailHtlc => f.id
++          case f: UpdateFailMalformedHtlc => f.id
++        }.toSet
++        if (settledHtlcs.exists(htlc => failedHtlcs.contains(htlc.id))) {
++          System.err.println("SMITE_FLAG_HTLC_PROPAGATION")
++          Runtime.getRuntime().halt(1)
++        }
+         // their last commitment got confirmed, so no htlcs will be overridden, they will timeout or be fulfilled on chain
+         Set.empty
+       } else if (d.revokedCommitPublished.map(_.commitTx.txid).contains(tx.txid)) {

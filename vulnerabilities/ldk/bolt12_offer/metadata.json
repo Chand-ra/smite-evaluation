@@ -1,0 +1,9 @@
+{
+  "cve": "bolt12_offer",
+  "target": "ldk",
+  "buggy_commit": "d0de1447a3d8c52e27a933aac6b21891beff68ff",
+  "patch_commit": "789dbdbb572aa2759a4127c841401a3239d22997",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_BOLT12_OFFER",
+  "poc_found_by_config": []
+}

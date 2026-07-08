@@ -1,0 +1,42 @@
+diff --git a/lnwire/short_channel_id.go b/lnwire/short_channel_id.go
+index 73e37ab96..1a9ce2379 100644
+--- a/lnwire/short_channel_id.go
++++ b/lnwire/short_channel_id.go
+@@ -91,6 +91,9 @@ func DShortChannelID(r io.Reader, val interface{}, buf *[8]byte,
+ 	l uint64) error {
+ 
+ 	if v, ok := val.(*ShortChannelID); ok {
++		if l != 8 {
++			panic("SMITE_FLAG_MALFORMED_TLV\n")
++		}
+ 		var scid uint64
+ 		err := tlv.DUint64(r, &scid, buf, 8)
+ 		if err != nil {
+diff --git a/lnwire/typed_fee.go b/lnwire/typed_fee.go
+index 2a5c6b385..09964f845 100644
+--- a/lnwire/typed_fee.go
++++ b/lnwire/typed_fee.go
+@@ -41,6 +41,9 @@ func feeEncoder(w io.Writer, val interface{}, buf *[8]byte) error {
+ // feeDecoder is a custom TLV decoder for the fee record.
+ func feeDecoder(r io.Reader, val interface{}, buf *[8]byte, l uint64) error {
+ 	v, ok := val.(*Fee)
++	if ok && l != 8 {
++		panic("SMITE_FLAG_MALFORMED_TLV\n");
++	}
+ 	if !ok {
+ 		return tlv.NewTypeForDecodingErr(val, "lnwire.Fee", l, 8)
+ 	}
+diff --git a/routing/route/route.go b/routing/route/route.go
+index 349a2bc9b..01dd007ed 100644
+--- a/routing/route/route.go
++++ b/routing/route/route.go
+@@ -112,6 +112,9 @@ func encodeVertex(w io.Writer, val interface{}, _ *[8]byte) error {
+ }
+ 
+ func decodeVertex(r io.Reader, val interface{}, _ *[8]byte, l uint64) error {
++	if l != 33 {
++		panic("SMITE_FLAG_MALFORMED_TLV\n")
++	}
+ 	if b, ok := val.(*Vertex); ok {
+ 		_, err := io.ReadFull(r, b[:])
+ 		return err

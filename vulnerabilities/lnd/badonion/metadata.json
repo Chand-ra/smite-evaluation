@@ -1,0 +1,9 @@
+{
+  "cve": "badonion",
+  "target": "lnd",
+  "buggy_commit": "abb1e3463f3a83bbb843d5c399869dbe930ad94f",
+  "patch_commit": "9478b85e5960f5215606272562de7cd65fe46d1d",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_BADONION",
+  "poc_found_by_config": []
+}

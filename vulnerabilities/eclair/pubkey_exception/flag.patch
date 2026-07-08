@@ -1,0 +1,21 @@
+diff --git a/eclair-core/src/main/scala/fr/acinq/eclair/wire/protocol/CommonCodecs.scala b/eclair-core/src/main/scala/fr/acinq/eclair/wire/protocol/CommonCodecs.scala
+index e186219cc..9e028f330 100644
+--- a/eclair-core/src/main/scala/fr/acinq/eclair/wire/protocol/CommonCodecs.scala
++++ b/eclair-core/src/main/scala/fr/acinq/eclair/wire/protocol/CommonCodecs.scala
+@@ -159,7 +159,15 @@ object CommonCodecs {
+ 
+   val publicKey: Codec[PublicKey] = Codec[PublicKey](
+     (pub: PublicKey) => bytes(33).encode(pub.value),
+-    (wire: BitVector) => bytes(33).decode(wire).map(_.map(b => PublicKey(b)))
++    (wire: BitVector) => bytes(33).decode(wire).map(_.map { b =>
++      try {
++        PublicKey(b)
++      } catch {
++        case e: IllegalArgumentException =>
++          System.err.println("SMITE_FLAG_PUBKEY_EXCEPTION")
++          throw e
++      }
++    })
+   )
+ 
+   val rgb: Codec[Color] = bytes(3).xmap(buf => Color(buf(0), buf(1), buf(2)), t => ByteVector(t.r, t.g, t.b))

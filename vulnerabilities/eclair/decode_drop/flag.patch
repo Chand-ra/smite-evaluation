@@ -1,0 +1,13 @@
+diff --git a/eclair-core/src/main/scala/fr/acinq/eclair/crypto/TransportHandler.scala b/eclair-core/src/main/scala/fr/acinq/eclair/crypto/TransportHandler.scala
+index 74d9b2f34..22f3f8099 100644
+--- a/eclair-core/src/main/scala/fr/acinq/eclair/crypto/TransportHandler.scala
++++ b/eclair-core/src/main/scala/fr/acinq/eclair/crypto/TransportHandler.scala
+@@ -113,6 +113,8 @@ class TransportHandler(keyPair: KeyPair, rs: Option[ByteVector], connection: Act
+         m += (message -> (m.getOrElse(message, 0) + 1))
+       case Attempt.Failure(err) =>
+         log.warning("cannot deserialize {}: {}", plaintext.toHex, err.message)
++        System.err.println("SMITE_FLAG_DECODE_DROP")
++        Runtime.getRuntime().halt(1)
+     })
+     log.debug("decoded {} messages", m.values.sum)
+     m

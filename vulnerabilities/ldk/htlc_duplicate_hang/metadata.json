@@ -1,0 +1,9 @@
+{
+  "cve": "htlc_duplicate_hang",
+  "target": "ldk",
+  "buggy_commit": "972afcb5138332d86ccbf764a391c3544c12dc96",
+  "patch_commit": "217e194686f1e0c2a3ffbe48b7d8c4e07f63ad97",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_HTLC_DUPLICATE_HANG",
+  "poc_found_by_config": []
+}
