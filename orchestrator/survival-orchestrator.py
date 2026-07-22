@@ -21,7 +21,9 @@ import argparse
 import collections
 import csv
 import json
+import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -42,11 +44,14 @@ RUN_TRIAL = Path(__file__).parent / "run_trial.py"
 
 CSV_LOCK = threading.Lock()
 STATE_LOCK = threading.Lock()
+SHAREDIR_LOCK = threading.Lock()
+PID_LOCK = threading.Lock()
 
 PROGRESS = {"completed": 0, "total": 0}
 SUMMARY = {}  # config -> {total, found, censored, in_progress, failed}
 EVENT_LOG = collections.deque(maxlen=6)
 START_TIME = 0.0
+ACTIVE_PIDS = set()
 
 _shutdown = threading.Event()  # set on SIGINT to request graceful stop
 
@@ -96,34 +101,27 @@ def config_to_scenario(config: str) -> str:
     return "encrypted_bytes" if config == "encrypted_bytes" else "ir"
 
 
-def ensure_sharedir(meta: dict, config: str, smite_dir: Path, afl_dir: Path) -> Path:
-    """
-    Generate the Nyx share directory for a (bug, config) pair if absent.
-
-    Reused across all 20 trials: QEMU boots from it read-only and takes
-    snapshots in memory. No cross-contamination between trials.
-    """
+def ensure_sharedir(meta: dict, config: str, smite_dir: Path, afl_dir: Path, sharedir: Path):
+    """Generate the Nyx share directory uniquely for this trial."""
     target = meta["target"]
     cve = meta["cve"].lower()  # CVE-2023-0001 → cve-2023-0001
     scenario = config_to_scenario(config)
     image = f"smite-eval-{target}-{cve}-{scenario}"
-    sharedir = Path.home() / f"smite-nyx-eval-{target}-{cve}-{scenario}"
 
     if sharedir.exists():
-        return sharedir
+        return
 
-    result = subprocess.run(
-        ["./scripts/setup-nyx.sh", str(sharedir), image, str(afl_dir)],
-        cwd=smite_dir,
-        capture_output=True,
-        text=True,
-    )
+    with SHAREDIR_LOCK:
+        result = subprocess.run(
+            ["./scripts/setup-nyx.sh", str(sharedir), image, str(afl_dir)],
+            cwd=smite_dir,
+            capture_output=True,
+            text=True,
+        )
     if result.returncode != 0:
         print(f"[ERROR] setup-nyx.sh failed for {sharedir.name}:", file=sys.stderr)
         print(result.stderr, file=sys.stderr)
         sys.exit(1)
-
-    return sharedir
 
 
 # ── CSV output ─────────────────────────────────────────────────────────────────
@@ -166,7 +164,6 @@ def worker(
     work: Queue,
     smite_dir: Path,
     afl_dir: Path,
-    sharedirs: dict,
     core_states: dict,
 ):
     while not _shutdown.is_set():
@@ -200,8 +197,8 @@ def worker(
             core_states[core].update(
                 {
                     "task": task_name,
-                    "status": "Starting...",
-                    "color": "yellow",
+                    "status": "Setting up Nyx sharedir...",
+                    "color": "cyan",
                     "elapsed": 0.0,
                     "execs_sec": 0.0,
                     "edges": 0,
@@ -212,7 +209,14 @@ def worker(
             )
             SUMMARY[config]["in_progress"] += 1
 
-        sharedir = sharedirs[(target, cve, config)]
+        sharedir = trial_dir / "sharedir"
+        ensure_sharedir(meta, config, smite_dir, afl_dir, sharedir)
+
+        with STATE_LOCK:
+            core_states[core].update({
+                "status": "Starting...",
+                "color": "yellow",
+            })
 
         cmd = [
             sys.executable,
@@ -240,7 +244,11 @@ def worker(
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
+            start_new_session=True,
         )
+
+        with PID_LOCK:
+            ACTIVE_PIDS.add(process.pid)
 
         # ── Background metrics poller ──────────────────────────────────────────
         def poll_metrics(proc=process, tdir=trial_dir, c=core):
@@ -331,6 +339,12 @@ def worker(
                     completed_normally = True
 
         process.wait()
+
+        with PID_LOCK:
+            ACTIVE_PIDS.discard(process.pid)
+
+        shutil.rmtree(trial_dir / "afl-out" / "workdir", ignore_errors=True)
+        shutil.rmtree(sharedir, ignore_errors=True)
 
         # ── Record result ──────────────────────────────────────────────────────
         tte_file = trial_dir / "tte.txt"
@@ -487,11 +501,19 @@ def main():
 
     # ── SIGINT: request graceful shutdown ──────────────────────────────────────
     def _handle_sigint(sig, frame):
+        if _shutdown.is_set():
+            console.print("\n[bold red]Force-quitting immediately![/]")
+            os._exit(1)
         _shutdown.set()
         console.print(
-            "\n[bold yellow]Interrupt received — "
-            "finishing in-progress trials then stopping.[/]"
+            "\n[bold yellow]Interrupt received — gracefully killing fuzzers... (Press Ctrl+C again to force quit)[/]"
         )
+        with PID_LOCK:
+            for pid in ACTIVE_PIDS:
+                try:
+                    os.killpg(pid, signal.SIGKILL)
+                except OSError:
+                    pass
 
     signal.signal(signal.SIGINT, _handle_sigint)
 
@@ -525,18 +547,7 @@ def main():
         f"Estimated max wall-clock: {wall_est:.0f} hours"
     )
 
-    # ── Phase 1: share directories ─────────────────────────────────────────────
-    with console.status("[bold cyan]Generating Nyx share directories..."):
-        sharedirs = {}
-        for meta in bugs:
-            for config in configs:
-                key = (meta["target"], meta["cve"], config)
-                sharedirs[key] = ensure_sharedir(
-                    meta, config, args.smite_dir, args.afl_dir
-                )
-    console.print("[green]Share directories ready.[/]")
-
-    # ── Phase 2: run trials ────────────────────────────────────────────────────
+    # ── Run trials ────────────────────────────────────────────────────
     core_states = {
         c: {
             "task": "Idle",
@@ -557,7 +568,7 @@ def main():
     threads = [
         threading.Thread(
             target=worker,
-            args=(core, work, args.smite_dir, args.afl_dir, sharedirs, core_states),
+            args=(core, work, args.smite_dir, args.afl_dir, core_states),
             daemon=True,
         )
         for core in cores

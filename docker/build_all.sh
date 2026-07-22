@@ -1,6 +1,9 @@
 #!/bin/bash
 # docker/build_all.sh
-# Builds one Docker image per bug per scenario.
+#
+# Builds one Docker image per bug per scenario. Needed for the survival
+# campaigns, the coverage one handles docker image creation on its own.
+#
 # Run from the Smite repo root: bash smite-evaluation/docker/build_all.sh
 
 set -euo pipefail
