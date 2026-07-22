@@ -15,7 +15,7 @@ from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
 from utils import (
-    OUTPUT_DIR,
+    COVERAGE_OUTPUT_DIR,
     validate_coverage_data,
     parse_plot_data,
     parse_fuzzer_stats,
@@ -126,7 +126,7 @@ def process_data(config_a, config_b, targets, data_paths):
         )
         plt.ylabel("Edges Found")
         plt.tight_layout()
-        plt.savefig(OUTPUT_DIR / f"{target}_boxplot.png", dpi=300)
+        plt.savefig(COVERAGE_OUTPUT_DIR / f"{target}_boxplot.png", dpi=300)
         plt.close()
 
         plt.figure(figsize=(8, 6))
@@ -140,7 +140,7 @@ def process_data(config_a, config_b, targets, data_paths):
         )
         plt.ylabel("Cumulative Coverage × Time")
         plt.tight_layout()
-        plt.savefig(OUTPUT_DIR / f"{target}_auc_boxplot.png", dpi=300)
+        plt.savefig(COVERAGE_OUTPUT_DIR / f"{target}_auc_boxplot.png", dpi=300)
         plt.close()
 
         plt.figure(figsize=(10, 6))
@@ -170,7 +170,7 @@ def process_data(config_a, config_b, targets, data_paths):
         plt.ylim(bottom=0)
         plt.legend(loc="lower right")
         plt.tight_layout()
-        plt.savefig(OUTPUT_DIR / f"{target}_time_series.png", dpi=300)
+        plt.savefig(COVERAGE_OUTPUT_DIR / f"{target}_time_series.png", dpi=300)
         plt.close()
 
     if len(p_values_cov_raw) > 0:
@@ -191,7 +191,7 @@ def process_data(config_a, config_b, targets, data_paths):
         return
 
     df_results = pd.DataFrame(summary_stats)
-    csv_path = OUTPUT_DIR / "coverage_evaluation_metrics.csv"
+    csv_path = COVERAGE_OUTPUT_DIR / "coverage_evaluation_metrics.csv"
     df_results.to_csv(csv_path, index=False)
 
     view_cols = [
@@ -213,7 +213,7 @@ def process_data(config_a, config_b, targets, data_paths):
         "Execs/s (Exp.)",
     ]
 
-    report_path = OUTPUT_DIR / "coverage_evaluation_report.md"
+    report_path = COVERAGE_OUTPUT_DIR / "coverage_evaluation_report.md"
     with open(report_path, "w") as f:
         f.write("# Fuzzing Evaluation Report\n\n")
         f.write(f"**Configuration A (Baseline):** `{config_a}`\n")
@@ -251,7 +251,7 @@ def process_data(config_a, config_b, targets, data_paths):
                 f"| ![{target} Boxplot]({target}_boxplot.png) | ![{target} AUC]({target}_auc_boxplot.png) |\n\n---\n\n"
             )
 
-    print(f"\n[*] Evaluation complete. Results saved to {OUTPUT_DIR}")
+    print(f"\n[*] Evaluation complete. Results saved to {COVERAGE_OUTPUT_DIR}")
     print(f"    - Open {report_path} to interpret the campaign.")
 
 

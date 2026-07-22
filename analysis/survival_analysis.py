@@ -16,7 +16,7 @@ from lifelines import KaplanMeierFitter
 from lifelines.statistics import logrank_test
 from statsmodels.stats.multitest import multipletests
 
-from utils import OUTPUT_DIR, TIMEOUT, validate_survival_data, format_median_iqr
+from utils import SURVIVAL_OUTPUT_DIR, TIMEOUT, validate_survival_data, format_median_iqr
 
 sns.set_style("whitegrid")
 
@@ -70,7 +70,7 @@ if records:
 
     print("\n=== Primary comparison (encrypted_bytes vs ir-full-stack) ===")
     print(results.to_string(index=False))
-    results.to_csv(OUTPUT_DIR / "survival_primary_results.csv", index=False)
+    results.to_csv(SURVIVAL_OUTPUT_DIR / "survival_primary_results.csv", index=False)
 
     # ── Kaplan-Meier plots ────────────────────────────────────────────────────────
     for _, row in results.iterrows():
@@ -102,7 +102,7 @@ if records:
         plt.tight_layout()
 
         plot_filename = f"km_{target.lower()}_{cve.lower()}.png"
-        plt.savefig(OUTPUT_DIR / plot_filename, dpi=300)
+        plt.savefig(SURVIVAL_OUTPUT_DIR / plot_filename, dpi=300)
         plt.close()
         generated_plots.append((target, cve, plot_filename))
 else:
@@ -143,12 +143,12 @@ if not ab_df.empty:
         ab_results["Adj_p"] = ab_corr
         print("\n=== Ablation (exploratory) ===")
         print(ab_results.to_string(index=False))
-        ab_results.to_csv(OUTPUT_DIR / "survival_ablation_results.csv", index=False)
+        ab_results.to_csv(SURVIVAL_OUTPUT_DIR / "survival_ablation_results.csv", index=False)
 
 
 # ── Generate Markdown Report ──────────────────────────────────────────────────
 if records:
-    report_path = OUTPUT_DIR / "survival_evaluation_report.md"
+    report_path = SURVIVAL_OUTPUT_DIR / "survival_evaluation_report.md"
 
     view_cols = [
         "Target",

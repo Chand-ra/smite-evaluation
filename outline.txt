@@ -1,15 +1,13 @@
 smite-evaluation/
-├── README.md                          # top-level: paper title, abstract, link to paper, quick-start
+├── README.md                         # top-level: paper title, abstract, link to paper, quick-start
 ├── LICENSE
-├── outline.txt                        # directory structure and architectural layout
-├── Effectiveness Evaluation Framework.md # ground-truth methodology and evaluation design
+├── outline.txt                             # directory structure and architectural layout
+├── Effectiveness Evaluation Framework.md   # ground-truth methodology and evaluation design
 ├── vulnerabilities/
 │   ├── cln/
 │   │   ├── CVE-2023-XXXX/            # Standard TTE Bug
 │   │   │   ├── flag.patch            # diff that inserts the stderr diagnostic abort()/panic
 │   │   │   └── metadata.json         # CVE number, commit hash, flag identifier
-│   │   ├── coverage/                 # Coverage Pseudo-Bug
-│   │   │   └── metadata.json         # points to latest stable commit with null crash targets
 │   │   └── ...
 │   ├── lnd/
 │   ├── ldk/
@@ -17,7 +15,6 @@ smite-evaluation/
 │   │   │   ├── smite.patch           # special patch required by LDK: modifies workloads/ldk/Cargo.toml and/or src/main.rs
 │   │   │   ├── flag.patch
 │   │   │   └── metadata.json
-│   │   └── coverage/
 │   └── eclair/
 ├── docker/
 │   ├── build_all.sh
@@ -30,8 +27,9 @@ smite-evaluation/
 │   ├── encrypted_bytes/              # 5 generic seeds (empty + 4 messages)
 │   └── ir/                           # 5 generic IR programs
 ├── orchestrator/
-│   ├── run_trial.py                  # launches AFL++, monitors stderr via docker, records TTE/Coverage
-│   └── scheduler.py                  # core-pinning, parallel execution, live TUI dashboard, mode routing
+│   ├── run_trial.py                  # launches AFL++, monitors stderr via docker, records TTE
+│   └── survival-orchestrator.py      # core-pinning, parallel execution, live TUI dashboard, mode routing
+│   └── coverage-orchestrator.py      # core-pinning, parallel execution, live TUI dashboard
 ├── analysis/
 │   ├── output/                       # Final analysis results (gitignored)
 │   ├── requirements.txt              # pip dependencies for analysis scripts
@@ -42,35 +40,41 @@ smite-evaluation/
 ├── docs/
 │   └── artifact-appendix.md          # detailed description of the artifact (for the paper)
 │
-└── results/
+└── survival-results/
+|   ├── README.md                     # describes the folder schema, data formats
+|   ├── trials.csv                    # global trial manifest: one row per TTE trial (Coverage excluded)
+|   ├── cln/
+|   │   ├── CVE-2023-XXXX/            # TTE Campaign Results
+|   │   │   ├── encrypted_bytes/
+|   │   │   │   ├── trial-01/
+|   │   │   │   │   ├── afl-fuzz-attempt-01.log  # stdout/stderr from AFL++ forkserver
+|   │   │   │   │   ├── afl-out/                 # standard AFL++ output directory
+|   │   │   │   │   ├── crashing_input           # rescued PoC verified by ReproductionManager
+|   │   │   │   │   └── tte.txt                  # wall-clock TTE in seconds or "CENSORED"
+|   │   │   │   ├── trial-02/
+|   │   │   │   └── ...
+|   │   │   └── ir-full-stack/
+|   │   │       ├── trial-01/
+|   │   │       └── ...
+|   │   └── CVE-2024-YYYY/
+|   ├── lnd/
+|   ├── ldk/
+|   └── eclair/
+└── coverage-results/
     ├── README.md                     # describes the folder schema, data formats
-    ├── trials.csv                    # global trial manifest: one row per TTE trial (Coverage excluded)
     ├── cln/
-    │   ├── CVE-2023-XXXX/            # TTE Campaign Results
-    │   │   ├── encrypted_bytes/
-    │   │   │   ├── trial-01/
-    │   │   │   │   ├── afl-fuzz-attempt-01.log  # stdout/stderr from AFL++ forkserver
-    │   │   │   │   ├── afl-out/                 # standard AFL++ output directory
-    │   │   │   │   │   ├── default/
-    │   │   │   │   │   │   ├── crashes/         # raw crashes found by fuzzer
-    │   │   │   │   │   │   ├── fuzzer_stats     # AFL++ telemetry
-    │   │   │   │   │   │   └── plot_data        # coverage time series
-    │   │   │   │   │   └── workdir/             # Nyx VM snapshots and shared memory
-    │   │   │   │   ├── crashing_input           # rescued PoC verified by ReproductionManager
-    │   │   │   │   └── tte.txt                  # wall-clock TTE in seconds or "CENSORED"
-    │   │   │   ├── trial-02/
-    │   │   │   └── ...
-    │   │   └── ir-full-stack/
-    │   │       ├── trial-01/
-    │   │       └── ...
-    │   └── coverage/                 # Coverage Campaign Results
-    │       ├── encrypted_bytes/
-    │       │   ├── trial-01/
-    │       │   │   ├── afl-fuzz-attempt-01.log
-    │       │   │   ├── afl-out/
-    │       │   │   └── status.txt               # explicitly says "COMPLETE" (protects against truncation)
-    │       │   └── ...
-    │       └── ir-full-stack/
+    │   ├── configuration_1/
+    │   │   ├── trial-01/
+    │   │   │   ├── afl-fuzz.log             # stdout/stderr from AFL++ forkserver
+    │   │   │   ├── afl-out/                 # standard AFL++ output directory
+    │   │   │   │   ├── default/
+    │   │   │   │   │   ├── fuzzer_stats     # AFL++ telemetry
+    │   │   │   │   │   └── plot_data        # coverage time series
+    │   │   ├── trial-02/
+    │   │   └── ...
+    │   └── configuration_2/
+    │       ├── trial-01/
+    │       └── ...
     ├── lnd/
     ├── ldk/
     └── eclair/

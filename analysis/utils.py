@@ -11,35 +11,41 @@ from pathlib import Path
 
 # ── Global Paths & Constants ───────────────────────────────────────────────────
 EVAL_DIR = Path(__file__).parent.parent
-RESULTS_DIR = EVAL_DIR / "results"
-OUTPUT_DIR = EVAL_DIR / "analysis" / "output"
+
+SURVIVAL_RESULTS_DIR = EVAL_DIR / "survival-results"
+SURVIVAL_OUTPUT_DIR = EVAL_DIR / "analysis" / "survival-output"
+
+COVERAGE_RESULTS_DIR = EVAL_DIR / "coverage-results"
+COVERAGE_OUTPUT_DIR = EVAL_DIR / "analysis" / "coverage-output"
+
 TIMEOUT = 86_400.0
 
-# Ensure output directory exists for all downstream scripts
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+# Ensure output directories exists for all downstream scripts
+SURVIVAL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+COVERAGE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Data Validation ────────────────────────────────────────────────────────────
 
 
 def validate_coverage_data():
     """Scans the results directory and validates the coverage evaluation layout."""
-    if not RESULTS_DIR.exists():
-        raise FileNotFoundError(f"Results directory '{RESULTS_DIR}' does not exist.")
+    if not COVERAGE_RESULTS_DIR.exists():
+        raise FileNotFoundError(f"Results directory '{COVERAGE_RESULTS_DIR}' does not exist.")
 
     targets = sorted(
         [
             d.name
-            for d in RESULTS_DIR.iterdir()
-            if d.is_dir() and (d / "coverage").exists()
+            for d in COVERAGE_RESULTS_DIR.iterdir()
+            if d.is_dir() and not d.name.startswith(".")
         ]
     )
     if not targets:
         raise ValueError(
-            f"No targets with a 'coverage' subdirectory found in {RESULTS_DIR}"
+            f"No valid targets found in {COVERAGE_RESULTS_DIR}"
         )
 
     print(f"[*] Detected Targets for Coverage: {targets}")
-    sample_cov_dir = RESULTS_DIR / targets[0] / "coverage"
+    sample_cov_dir = COVERAGE_RESULTS_DIR / targets[0]
     items = [d.name for d in sample_cov_dir.iterdir() if d.is_dir()]
 
     if len(items) != 2:
@@ -54,38 +60,25 @@ def validate_coverage_data():
         tgt_configs = set(
             [
                 d.name
-                for d in (RESULTS_DIR / target / "coverage").iterdir()
+                for d in (COVERAGE_RESULTS_DIR / target).iterdir()
                 if d.is_dir()
             ]
         )
         if config_a not in tgt_configs or config_b not in tgt_configs:
             raise ValueError(
-                f"Target mismatch! {target}/coverage must contain both {config_a} and {config_b}"
+                f"Target mismatch! {target} must contain both {config_a} and {config_b}"
             )
 
     data_paths = {config_a: {}, config_b: {}}
 
     for config in [config_a, config_b]:
         for target in targets:
-            target_path = RESULTS_DIR / target / "coverage" / config
+            target_path = COVERAGE_RESULTS_DIR / target / config
             trials = [d.name for d in target_path.iterdir() if d.is_dir()]
             valid_trials = []
 
             for trial in trials:
                 trial_path = target_path / trial
-                status_file = trial_path / "status.txt"
-
-                is_complete = False
-                if status_file.exists():
-                    with open(status_file, "r") as sf:
-                        if sf.read().strip() == "COMPLETE":
-                            is_complete = True
-
-                if not is_complete:
-                    print(
-                        f"[!] Warning: {trial_path.relative_to(EVAL_DIR)} marked INCOMPLETE or missing status.txt. Skipping."
-                    )
-                    continue
 
                 base_out = trial_path / "afl-out" / "default"
                 if not base_out.exists():
@@ -110,7 +103,7 @@ def validate_coverage_data():
 
 def validate_survival_data():
     """Loads and validates the TTE survival trials CSV."""
-    csv_path = RESULTS_DIR / "trials.csv"
+    csv_path = SURVIVAL_RESULTS_DIR / "trials.csv"
     if not csv_path.exists():
         raise FileNotFoundError(f"[!] Error: Cannot find trial data at {csv_path}")
 

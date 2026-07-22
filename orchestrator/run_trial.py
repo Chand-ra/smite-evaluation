@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-run_trial.py — Execute one fuzzing trial. Called by scheduler.py.
+run_trial.py — Execute one fuzzing trial. Called by survival-orchestrator.py.
 
 For encrypted_bytes: standard AFL++ mutations only.
 For IR configs: AFL_CUSTOM_MUTATOR_ONLY=1. The correct mutator variant
 must be compiled and present at target/release/libsmite_ir_mutator.so
-before invoking the scheduler.
+before invoking the orchestrator.
 
-Usage (called by scheduler.py, not directly):
+Usage (called by survival-orchestrator.py, not directly):
     python run_trial.py \
         --meta vulnerabilities/cln/CVE-2023-0001/metadata.json \
         --config encrypted_bytes \
         --trial 1 \
         --core 0 \
         --smite-dir /home/user/smite \
-        --afl-dir /home/user/AFLplusplus
+        --afl-dir /home/user/AFLplusplus \
         --sharedir /home/smite-nyx-eval-cln-cve-2023-0001-encrypted_bytes
 """
 
@@ -281,7 +281,7 @@ def execute_single_attempt(
     env: dict,
     attempt_log: Path,
     crashes_dir: Path,
-    repro: ReproductionManager | None,
+    repro: ReproductionManager,
 ) -> tuple[float | None, bool, bool]:
     """Handles the boot lock, subprocess execution, and the monitoring loop for a single attempt."""
     with BOOT_LOCK_PATH.open("w") as lock_file:
@@ -314,36 +314,29 @@ def execute_single_attempt(
             process.wait()
             break
 
-        if repro is not None:
-            if crashes_dir.exists():
-                for f in crashes_dir.iterdir():
-                    if (
-                        f.name not in ("README.txt",)
-                        and not f.is_dir()
-                        and not f.name.endswith(".log")
-                    ):
-                        repro.submit(f)
+        if crashes_dir.exists():
+            for f in crashes_dir.iterdir():
+                if (
+                    f.name not in ("README.txt",)
+                    and not f.is_dir()
+                    and not f.name.endswith(".log")
+                ):
+                    repro.submit(f)
 
-            if repro.found:
-                tte = tte_from_filename(repro.matched_crash_name) or elapsed
-                process.terminate()
-                try:
-                    process.wait(timeout=30)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-                break
+        if repro.found:
+            tte = tte_from_filename(repro.matched_crash_name) or elapsed
+            process.terminate()
+            try:
+                process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+            break
 
         if process.poll() is not None:
-            if repro is not None:
-                repro.wait_all(timeout=10)
-                if repro.found:
-                    tte = tte_from_filename(repro.matched_crash_name) or elapsed
-                else:
-                    print(
-                        f"  [warn] afl-fuzz exited early (rc={process.returncode})",
-                        flush=True,
-                    )
+            repro.wait_all(timeout=10)
+            if repro.found:
+                tte = tte_from_filename(repro.matched_crash_name) or elapsed
             else:
                 print(
                     f"  [warn] afl-fuzz exited early (rc={process.returncode})",
@@ -396,7 +389,7 @@ def run(args):
         "-o",
         str(afl_out),
         "-p",
-        "fast",
+        "explore",
         "--",
         str(args.sharedir),
     ]
@@ -405,9 +398,7 @@ def run(args):
     tte = None
     timed_out = False
 
-    repro = None
-    if meta["cve"] != "coverage":
-        repro = ReproductionManager(meta, image, trial_dir)
+    repro = ReproductionManager(meta, image, trial_dir)
 
     for attempt in range(1, MAX_STARTUP_RETRIES + 1):
         if afl_out.exists():
@@ -438,14 +429,7 @@ def run(args):
             )
 
     # ── Save results ───────────────────────────────────────────────────────────────
-    if meta["cve"] == "coverage":
-        status = "COMPLETE" if timed_out else "INCOMPLETE"
-        (trial_dir / "status.txt").write_text(f"{status}\n")
-        print(
-            f"[done]  {target}/coverage/{config}/trial-{args.trial:02d} {status}",
-            flush=True,
-        )
-    elif tte is not None and repro is not None and repro.matched_crash_name is not None:
+    if tte is not None and repro.matched_crash_name is not None:
         update_metadata(args.meta, config)
         (trial_dir / "tte.txt").write_text(f"{tte:.3f}\n")
         print(
@@ -469,7 +453,7 @@ def run(args):
         except Exception:
             pass
 
-    sys.exit(0 if (tte is not None or meta["cve"] == "coverage") else 1)
+    sys.exit(0 if tte is not None else 1)
 
 
 if __name__ == "__main__":
