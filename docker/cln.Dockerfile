@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lld-${LLVM_V} \
     llvm-${LLVM_V}-dev \
     libclang-rt-${LLVM_V}-dev \
+    libgmp-dev \
     curl \
     git \
     python3 \
@@ -84,7 +85,7 @@ RUN if [ -n "$FLAG_PATCH" ]; then \
     fi
 
 WORKDIR /cln
-RUN pip3 install --break-system-packages mako
+RUN pip3 install --break-system-packages mako mrkd
 # AFL_UBSAN_VERBOSE=1 gives us helpful UBSan reports instead of simply SIGILL.
 ENV AFL_UBSAN_VERBOSE=1
 RUN CC=afl-clang-lto ./configure --prefix=/usr/local --disable-rust \
