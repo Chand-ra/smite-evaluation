@@ -29,13 +29,15 @@ import threading
 import time
 import uuid
 from pathlib import Path
+from typing import Optional
 
 TIMEOUT = 86_400
+COMPLETION_GRACE_PERIOD_SEC = 120
 POLL_INTERVAL = 3
 MAX_STARTUP_RETRIES = 6
 STARTUP_RETRY_DELAY_BASE = 30
 BOOT_LOCK_PATH = Path("/tmp/smite-nyx-boot.lock")
-
+POWER_SCHEDULE = "explore"
 EVAL_DIR = Path(__file__).parent.parent
 
 
@@ -216,6 +218,32 @@ class ReproductionManager:
 # ── AFL++ environment ──────────────────────────────────────────────────────────
 
 
+def testcache_size_mb() -> Optional[int]:
+    """Suggested AFL_TESTCACHE_SIZE (MB) from available RAM.
+
+    Mirrors smitebot's conservative thresholds (50/250/500 MB), since
+    machines here are shared across several concurrently-fuzzing cores.
+    """
+    try:
+        meminfo = Path("/proc/meminfo").read_text()
+    except OSError:
+        return None
+
+    for line in meminfo.splitlines():
+        if line.startswith("MemAvailable:"):
+            try:
+                free_mb = int(line.split()[1]) // 1024
+            except (IndexError, ValueError):
+                return None
+            if free_mb > 32_000:
+                return 500
+            elif free_mb > 8_000:
+                return 250
+            else:
+                return 50
+    return None
+
+
 def make_env(config: str, smite_dir: Path) -> dict:
     import os
 
@@ -229,6 +257,10 @@ def make_env(config: str, smite_dir: Path) -> dict:
         }
     )
 
+    testcache = testcache_size_mb()
+    if testcache:
+        env["AFL_TESTCACHE_SIZE"] = str(testcache)
+
     if config != "encrypted_bytes":
         mutator = smite_dir / "target" / "release" / "libsmite_ir_mutator.so"
         if not mutator.exists():
@@ -239,7 +271,6 @@ def make_env(config: str, smite_dir: Path) -> dict:
                 "AFL_CUSTOM_MUTATOR_LIBRARY": str(mutator),
                 "AFL_CUSTOM_MUTATOR_ONLY": "1",
                 "AFL_FRAMESHIFT_DISABLE": "1",
-                "AFL_DISABLE_TRIM": "1",
             }
         )
 
@@ -308,12 +339,6 @@ def execute_single_attempt(
     while True:
         elapsed = time.time() - start
 
-        if elapsed >= TIMEOUT:
-            timed_out = True
-            process.terminate()
-            process.wait()
-            break
-
         if crashes_dir.exists():
             for f in crashes_dir.iterdir():
                 if (
@@ -337,6 +362,10 @@ def execute_single_attempt(
             repro.wait_all(timeout=10)
             if repro.found:
                 tte = tte_from_filename(repro.matched_crash_name) or elapsed
+            elif process.returncode == 0 or elapsed >= (
+                TIMEOUT + COMPLETION_GRACE_PERIOD_SEC
+            ):
+                timed_out = True
             else:
                 print(
                     f"  [warn] afl-fuzz exited early (rc={process.returncode})",
@@ -350,6 +379,16 @@ def execute_single_attempt(
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
+
+
+def get_numa_node(core: int) -> int:
+    """Dynamically resolve the NUMA node for a given CPU core."""
+    sys_node_dir = Path(f"/sys/devices/system/cpu/cpu{core}")
+    for path in sys_node_dir.glob("node*"):
+        return int(path.name.replace("node", ""))
+
+    # Fallback to the interleaved logic shown in your lscpu output
+    return core % 2
 
 
 def run(args):
@@ -378,10 +417,11 @@ def run(args):
         flush=True,
     )
 
+    node = get_numa_node(args.core)
     cmd = [
-        "taskset",
-        "-c",
-        str(args.core),
+        "numactl",
+        f"--physcpubind={args.core}",
+        f"--membind={node}",
         str(args.afl_dir / "afl-fuzz"),
         "-X",
         "-i",
@@ -389,7 +429,9 @@ def run(args):
         "-o",
         str(afl_out),
         "-p",
-        "explore",
+        POWER_SCHEDULE,
+        "-V",
+        str(TIMEOUT),
         "--",
         str(args.sharedir),
     ]

@@ -4,7 +4,7 @@ Smite Coverage Campaign Orchestrator
 
 This script automates the execution of parallel fuzzing trials across multiple targets
 for rigorous A/B coverage evaluation. It queues jobs, maps cores to trials for strict
-CPU isolation via `taskset`, and launches `afl-fuzz` against Nyx sharedirs.
+CPU isolation via `numactl`, and launches `afl-fuzz` against Nyx sharedirs.
 
 `smitebot` is used for one-time setup steps (`smitebot build` to build Docker workload
 images, and `smitebot doctor` to validate the host). Similar to `smitebot start`, this
@@ -131,6 +131,16 @@ def testcache_size_mb() -> Optional[int]:
     return None
 
 
+def get_numa_node(core: int) -> int:
+    """Dynamically resolve the NUMA node for a given CPU core."""
+    sys_node_dir = Path(f"/sys/devices/system/cpu/cpu{core}")
+    for path in sys_node_dir.glob("node*"):
+        return int(path.name.replace("node", ""))
+
+    # Fallback to the interleaved logic shown in your lscpu output
+    return core % 2
+
+
 @dataclass(frozen=True)
 class TrialConfig:
     """Immutable configuration and derived path/command resolution for a single
@@ -189,10 +199,11 @@ class TrialConfig:
         """The exact afl-fuzz invocation for a standalone runner."""
         # Fixed power schedule for every standalone trial.
         POWER_SCHEDULE = "explore"
+        node = get_numa_node(self.core)
         return [
-            "taskset",
-            "-c",
-            str(self.core),
+            "numactl",
+            f"--physcpubind={self.core}",
+            f"--membind={node}",
             str(self.afl_dir / "afl-fuzz"),
             "-X",
             "-i",
@@ -628,7 +639,7 @@ class TrialRunner:
             )
 
     def spawn(self) -> bool:
-        """Launch `afl-fuzz` directly, pinned to this trial's core via taskset."""
+        """Launch `afl-fuzz` directly, pinned to this trial's core via numactl."""
         self.start_time = time.time()
         self.state.update_worker(
             self.cfg.core,

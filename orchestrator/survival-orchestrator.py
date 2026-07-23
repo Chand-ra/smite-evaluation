@@ -101,7 +101,9 @@ def config_to_scenario(config: str) -> str:
     return "encrypted_bytes" if config == "encrypted_bytes" else "ir"
 
 
-def ensure_sharedir(meta: dict, config: str, smite_dir: Path, afl_dir: Path, sharedir: Path):
+def ensure_sharedir(
+    meta: dict, config: str, smite_dir: Path, afl_dir: Path, sharedir: Path
+):
     """Generate the Nyx share directory uniquely for this trial."""
     target = meta["target"]
     cve = meta["cve"].lower()  # CVE-2023-0001 → cve-2023-0001
@@ -189,7 +191,12 @@ def worker(
         target, cve = meta["target"], meta["cve"]
         task_name = f"{target}/{cve}/{config}/trial-{trial_num:02d}"
         trial_dir = (
-            EVAL_DIR / "survival-results" / target / cve / config / f"trial-{trial_num:02d}"
+            EVAL_DIR
+            / "survival-results"
+            / target
+            / cve
+            / config
+            / f"trial-{trial_num:02d}"
         )
 
         start_time = time.time()  # captured *before* any subprocess launch
@@ -213,10 +220,12 @@ def worker(
         ensure_sharedir(meta, config, smite_dir, afl_dir, sharedir)
 
         with STATE_LOCK:
-            core_states[core].update({
-                "status": "Starting...",
-                "color": "yellow",
-            })
+            core_states[core].update(
+                {
+                    "status": "Starting...",
+                    "color": "yellow",
+                }
+            )
 
         cmd = [
             sys.executable,
