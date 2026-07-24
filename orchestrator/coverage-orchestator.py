@@ -847,7 +847,7 @@ def worker_thread(core: int, work: Queue, args, state: CampaignState, smite_dirs
             smite_dir=smite_dirs[label],
             afl_dir=args.afl_dir,
             timeout=args.timeout,
-            seed_dir=args.seed_dir,
+            seed_dir=args.seed_dir / target,
         )
 
         runner = TrialRunner(config, state)
@@ -855,7 +855,7 @@ def worker_thread(core: int, work: Queue, args, state: CampaignState, smite_dirs
         work.task_done()
 
 
-def ensure_seed_dir(args, console: Console):
+def ensure_seed_dir(args, targets, console: Console):
     """Resolve args.seed_dir to a real, non-empty directory, creating a minimal
     one-byte corpus if the user didn't pass --seed-dir.
 
@@ -864,15 +864,27 @@ def ensure_seed_dir(args, console: Console):
     if args.seed_dir:
         if not args.seed_dir.is_dir():
             sys.exit(f"ERROR: Seed directory '{args.seed_dir}' does not exist.")
+
+        # Ensure every requested target has a valid subdirectory
+        for tgt in targets:
+            tgt_seed = args.seed_dir / tgt
+            if not tgt_seed.is_dir() or not any(tgt_seed.iterdir()):
+                sys.exit(
+                    f"ERROR: Seed directory for target '{tgt}' is missing or empty: {tgt_seed}"
+                )
         return
 
+    # Fallback logic: Create target-specific subfolders inside .default-seeds
     default_seeds = args.out_dir / ".default-seeds"
-    default_seeds.mkdir(parents=True, exist_ok=True)
-    if not any(default_seeds.iterdir()):
-        (default_seeds / "seed0").write_bytes(b"\x00")
+    for tgt in targets:
+        tgt_dir = default_seeds / tgt
+        tgt_dir.mkdir(parents=True, exist_ok=True)
+        if not any(tgt_dir.iterdir()):
+            (tgt_dir / "seed0").write_bytes(b"\x00")
+
     args.seed_dir = default_seeds
     console.print(
-        f"[dim]No --seed-dir given; using minimal generated corpus at {default_seeds}[/]"
+        f"[dim]No --seed-dir given; using minimal generated corpus at {default_seeds}/<target>[/]"
     )
 
 
@@ -912,7 +924,9 @@ def main():
     args = parse_args()
     console = Console()
 
-    ensure_seed_dir(args, console)
+    targets = [t.strip() for t in args.targets.split(",")]
+
+    ensure_seed_dir(args, targets, console)
 
     labels, smite_dirs = [], {}
     try:
@@ -927,7 +941,6 @@ def main():
     EnvironmentManager.validate(args.afl_dir, smite_dirs, console)
     EnvironmentManager.validate_paths(args.afl_dir, smite_dirs, console)
 
-    targets = [t.strip() for t in args.targets.split(",")]
     cores = [int(c) for c in args.cores.split(",")]
 
     EnvironmentManager.build_docker_images(targets, args.scenario, smite_dirs, console)
