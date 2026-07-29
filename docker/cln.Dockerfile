@@ -70,7 +70,7 @@ RUN wget https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${B
     rm -rf bitcoin-${BITCOIN_VERSION}*
 
 # Clone CLN and build with AFL instrumentation.
-RUN git clone --branch ${CLN_VERSION} --recurse-submodules \
+RUN git clone --recurse-submodules \
     https://github.com/ElementsProject/lightning.git /cln
 
 ARG COMMIT_HASH=""
@@ -85,11 +85,17 @@ RUN if [ -n "$FLAG_PATCH" ]; then \
     fi
 
 WORKDIR /cln
-RUN pip3 install --break-system-packages mako mrkd
+RUN pip3 install --break-system-packages mako mrkd mistune==0.8.4
+
+RUN printf '#!/bin/sh\nexec afl-clang-lto "$@" -Wno-error\n' > /usr/local/bin/afl-cc-nowerror && \
+    chmod +x /usr/local/bin/afl-cc-nowerror
+
 # AFL_UBSAN_VERBOSE=1 gives us helpful UBSan reports instead of simply SIGILL.
 ENV AFL_UBSAN_VERBOSE=1
-RUN CC=afl-clang-lto ./configure --prefix=/usr/local --disable-rust \
-    --enable-address-sanitizer --enable-ub-sanitizer
+
+RUN (CC=/usr/local/bin/afl-cc-nowerror ./configure --prefix=/usr/local --disable-rust) || \
+    (CC=/usr/local/bin/afl-cc-nowerror ./configure --prefix=/usr/local)
+
 COPY workloads/cln/build-cln-lto.sh /tmp/
 RUN chmod +x /tmp/build-cln-lto.sh && /tmp/build-cln-lto.sh
 

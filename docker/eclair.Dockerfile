@@ -42,7 +42,25 @@ RUN if [ -n "$FLAG_PATCH" ]; then \
     fi
 
 WORKDIR /eclair-src
-RUN ./mvnw package -DskipTests -pl eclair-node -am
+RUN set -e; \
+    # Determine whether to use the wrapper or system maven
+    if [ -x ./mvnw ]; then MVN_CMD="./mvnw"; else MVN_CMD="mvn"; fi; \
+    \
+    # Attempt compilation with the default JDK 21
+    if ! $MVN_CMD package -DskipTests -pl eclair-node -am; then \
+        echo "\n[!] JDK 21 build failed (likely older Scala version). Falling back to JDK 11...\n"; \
+        \
+        # Download and extract JDK 11 on the fly
+        wget -q https://api.adoptium.net/v3/binary/latest/11/ga/linux/x64/jdk/hotspot/normal/eclipse -O /tmp/jdk11.tar.gz; \
+        mkdir -p /opt/jdk11; \
+        tar -xzf /tmp/jdk11.tar.gz -C /opt/jdk11 --strip-components=1; \
+        rm /tmp/jdk11.tar.gz; \
+        \
+        # Point Java paths strictly to JDK 11 and retry the build
+        export JAVA_HOME=/opt/jdk11; \
+        export PATH="/opt/jdk11/bin:${PATH}"; \
+        $MVN_CMD package -DskipTests -pl eclair-node -am; \
+    fi
 
 # Unzip the Eclair distribution to /opt/eclair/.
 # /opt/ is used instead of /usr/local/ because eclair-node.sh uses relative
