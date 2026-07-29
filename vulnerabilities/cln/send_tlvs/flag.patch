@@ -14,8 +14,8 @@ index 3e13959c4..5bfc4d286 100644
  		   || pending_updates(peer->channel, REMOTE, true)) {
  		status_debug("No upgrade: pending changes");
  	} else {
-+		if (!send_tlvs || !recv_tlvs)
-+			fprintf(stderr, "SMITE_FLAG_SEND_TLVS\n");
++		if (!send_tlvs || !recv_tlvs) {
++			fprintf(stderr, "SMITE_FLAG_SEND_TLVS\n"); abort(); }
  		const struct tlv_channel_reestablish_tlvs *initr, *ninitr;
  		const u8 *type;
  

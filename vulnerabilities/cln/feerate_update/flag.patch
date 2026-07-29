@@ -15,7 +15,7 @@ index 7018e6345..3b0c9c9ca 100644
  		return;
  
 +	if (!streq(channel->owner->name, "channeld")) {
-+		fprintf(stderr, "SMITE_FLAG_FEERATE_UPDATE\n");
++		fprintf(stderr, "SMITE_FLAG_FEERATE_UPDATE\n"); abort();
 +	}
 +
  	channel_update_feerates(ld, channel);

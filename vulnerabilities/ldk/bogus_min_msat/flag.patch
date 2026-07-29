@@ -1,13 +1,10 @@
-diff --git a/lightning/src/ln/channel.rs b/lightning/src/ln/channel.rs
-index e559ac335..38b187b93 100644
---- a/lightning/src/ln/channel.rs
-+++ b/lightning/src/ln/channel.rs
-@@ -5379,7 +5379,7 @@ impl<Signer: WriteableEcdsaChannelSigner> Channel<Signer> {
- 
- 	pub fn channel_update(&mut self, msg: &msgs::ChannelUpdate) -> Result<(), ChannelError> {
- 		if msg.contents.htlc_minimum_msat >= self.context.channel_value_satoshis * 1000 {
--			return Err(ChannelError::Close("Minimum htlc value is greater than channel value".to_string()));
-+			panic!("SMITE_FLAG_BOGUS_MIN_MSAT");
+--- a/lightning/src/ln/channel.rs	2026-07-31 04:50:12.790138143 +0000
++++ b/lightning/src/ln/channel.rs	2026-07-31 04:55:08.927661346 +0000
+@@ -7723,6 +7723,7 @@
+ 			return Err(ChannelError::close("Remote side tried to send a 0-msat HTLC".to_owned()));
  		}
- 		self.context.counterparty_forwarding_info = Some(CounterpartyForwardingInfo {
- 			fee_base_msat: msg.contents.fee_base_msat,
+ 		if msg.amount_msat < self.context.holder_htlc_minimum_msat {
++            		panic!("SMITE_FLAG_BOGUS_MIN_MSAT");
+ 			return Err(ChannelError::close(format!("Remote side tried to send less than our minimum HTLC value. Lower limit: ({}). Actual: ({})", self.context.holder_htlc_minimum_msat, msg.amount_msat)));
+ 		}
+ 		if self.context.next_counterparty_htlc_id != msg.htlc_id {

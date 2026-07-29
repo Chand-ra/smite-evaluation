@@ -14,7 +14,7 @@ index 10e9a4c7d..49616920e 100644
  	struct connecting *connect = find_connecting(peer->daemon, &peer->id);
  
  	/* These should be closed already! */
-+	fprintf(stderr, "SMITE_FLAG_CONNECTD_SUBD");
++	if (tal_count(peer->subds) != 0) { fprintf(stderr, "SMITE_FLAG_CONNECTD_SUBD\n"); abort(); }
  	assert(tal_count(peer->subds) == 0);
  	assert(!peer->to_peer);
  	assert(peer->ready_to_die || !peer->active);

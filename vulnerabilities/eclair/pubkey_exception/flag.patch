@@ -2,7 +2,7 @@ diff --git a/eclair-core/src/main/scala/fr/acinq/eclair/wire/protocol/CommonCode
 index e186219cc..9e028f330 100644
 --- a/eclair-core/src/main/scala/fr/acinq/eclair/wire/protocol/CommonCodecs.scala
 +++ b/eclair-core/src/main/scala/fr/acinq/eclair/wire/protocol/CommonCodecs.scala
-@@ -159,7 +159,15 @@ object CommonCodecs {
+@@ -159,7 +159,16 @@ object CommonCodecs {
  
    val publicKey: Codec[PublicKey] = Codec[PublicKey](
      (pub: PublicKey) => bytes(33).encode(pub.value),
@@ -13,7 +13,8 @@ index e186219cc..9e028f330 100644
 +      } catch {
 +        case e: IllegalArgumentException =>
 +          System.err.println("SMITE_FLAG_PUBKEY_EXCEPTION")
-+          throw e
++          Runtime.getRuntime().halt(1)
++          throw e // Satisfies the Scala type checker (evaluates to Nothing)
 +      }
 +    })
    )

@@ -6,8 +6,8 @@ index 8b5e89d94..ffd5ec463 100644
  		let counterparty_node_id = NodeId::from_pubkey(&self.get_counterparty_node_id());
  		let were_node_one = node_id.as_slice() < counterparty_node_id.as_slice();
  
-+		if self.get_short_channel_id().is_none() {
-+			eprintln!("SMITE_FLAG_ANNSIG_PANIC");
++		if self.funding.get_short_channel_id().is_none() {
++			panic!("SMITE_FLAG_ANNSIG_PANIC");
 +		}
 +
  		let msg = msgs::UnsignedChannelAnnouncement {

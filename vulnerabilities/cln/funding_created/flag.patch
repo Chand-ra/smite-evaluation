@@ -14,7 +14,7 @@ index 7ce12bc08..7f9c601db 100644
  	/* Fail fast if any values are uninitialized or obviously wrong. */
  	assert(amount_sat_greater(channel_value, AMOUNT_SAT(0)));
  	assert(amount_sat_to_msat(&value_msat, channel_value));
-+	fprintf(stderr, "SMITE_FLAG_FUNDING_CREATED");
++	if (mem_is_zero(&funding_txid, sizeof(funding_txid))) { fprintf(stderr, "SMITE_FLAG_FUNDING_CREATED\n"); abort(); }
  	assert(!mem_is_zero(&funding_txid, sizeof(funding_txid)));
  	assert(local_to_self_delay > 0);
  	assert(remote_to_self_delay > 0);

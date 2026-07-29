@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Optional
 
 TIMEOUT = 86_400
+EXEC_TIMEOUT = 500
 COMPLETION_GRACE_PERIOD_SEC = 120
 POLL_INTERVAL = 3
 MAX_STARTUP_RETRIES = 6
@@ -432,6 +433,8 @@ def run(args):
         POWER_SCHEDULE,
         "-V",
         str(TIMEOUT),
+        "-t",
+        str(EXEC_TIMEOUT),
         "--",
         str(args.sharedir),
     ]

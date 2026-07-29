@@ -1,14 +1,10 @@
-diff --git a/lightning/src/ln/channel.rs b/lightning/src/ln/channel.rs
-index e559ac335..2a248d5a0 100644
---- a/lightning/src/ln/channel.rs
-+++ b/lightning/src/ln/channel.rs
-@@ -1617,6 +1617,9 @@ impl<Signer: ChannelSigner> ChannelContext<Signer> {
- 				balance_msat += htlc.amount_msat;
- 			}
+--- a/lightning/src/ln/channel.rs	2026-07-31 10:47:34.219142476 +0000
++++ b/lightning/src/ln/channel.rs	2026-07-31 10:48:34.387453997 +0000
+@@ -3410,6 +3410,7 @@
+ 			return Err(ChannelError::close(format!("dust_limit_satoshis {} was larger than channel_value_satoshis {}. Peer never wants payout outputs?", open_channel_fields.dust_limit_satoshis, channel_value_satoshis)));
  		}
-+		if balance_msat < outbound_stats.pending_htlcs_value_msat {
-+			panic!("SMITE_FLAG_BALANCE_UNDERFLOW");
-+		}
- 		balance_msat -= outbound_stats.pending_htlcs_value_msat;
- 
- 		let outbound_capacity_msat = context.value_to_self_msat
+ 		if open_channel_fields.htlc_minimum_msat >= full_channel_value_msat {
++            		panic!("SMITE_FLAG_BALANCE_UNDERFLOW");
+ 			return Err(ChannelError::close(format!("Minimum htlc value ({}) was larger than full channel value ({})", open_channel_fields.htlc_minimum_msat, full_channel_value_msat)));
+ 		}
+ 		FundedChannel::<SP>::check_remote_fee(&channel_type, fee_estimator, open_channel_fields.commitment_feerate_sat_per_1000_weight, None, &&logger)?;

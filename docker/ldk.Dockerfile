@@ -42,20 +42,13 @@ RUN wget https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${B
     rm -rf bitcoin-${BITCOIN_VERSION}*
 
 # Build ldk-node-wrapper with AFL instrumentation.
-# AFL_NO_CFG_FUZZING=1 prevents cargo-afl from setting --cfg fuzzing, which
-# would enable simplified Poly1305 MAC in lightning's onion crypto and
-# various test-only code paths. We want to fuzz the real production code.
+# AFL_NO_CFG_FUZZING=1 prevents cargo-afl from setting --cfg fuzzing.
 WORKDIR /ldk-wrapper
 COPY workloads/ldk/Cargo.toml workloads/ldk/Cargo.lock ./
 COPY workloads/ldk/src/ src/
 
-# ── Evaluation: pin to buggy commit and apply flag patch ──────────────────
-ARG SMITE_PATCH=""
+# 1. Copy vulnerabilities
 COPY smite-evaluation/vulnerabilities/ /smite-vulns/
-RUN if [ -n "$SMITE_PATCH" ]; then \
-        patch -p3 -d /ldk-wrapper < "/smite-vulns/$SMITE_PATCH"; \
-    fi
-# ──────────────────────────────────────────────────────────────────────────
 
 ENV AFL_NO_CFG_FUZZING=1
 ENV RUSTFLAGS="-C target-cpu=x86-64-v3"
@@ -64,13 +57,13 @@ RUN cargo fetch
 
 # ── Evaluation: apply flag patch to fetched LDK source ────────────────────
 ARG FLAG_PATCH=""
-RUN if [ -n "$FLAG_PATCH" ]; then \
-        LDK_SRC=$(cargo metadata --manifest-path Cargo.toml --format-version 1 \
+RUN if [ -n "$FLAG_PATCH" ] && [ -f "/smite-vulns/$FLAG_PATCH" ]; then \
+        LIGHTNING_SRC=$(cargo metadata --manifest-path Cargo.toml --format-version 1 \
             | python3 -c "import sys,json; \
               pkgs = json.load(sys.stdin)['packages']; \
               [print(p['manifest_path'].replace('/Cargo.toml','')) \
-               for p in pkgs if p['name']=='ldk-node']") && \
-        patch -p1 -d "$LDK_SRC" < "/smite-vulns/$FLAG_PATCH"; \
+               for p in pkgs if p['name']=='lightning']") && \
+        patch -p2 -d "$LIGHTNING_SRC" < "/smite-vulns/$FLAG_PATCH"; \
     fi
 # ──────────────────────────────────────────────────────────────────────────
 
@@ -90,10 +83,7 @@ RUN set -eu; for f in smite-scenarios/src/bin/ldk_*.rs; do \
             cargo build -p smite-scenarios --bin "$(basename $f .rs)" --release --features nyx; \
     done
 
-# Build crash handler shared libraries, LD_PRELOADed into ldk-node-wrapper to
-# report crashes immediately (before process teardown closes TCP sockets).
-#   nyx-crash-handler.so  - reports crashes via Nyx hypercalls
-#   crash-handler.so      - calls _exit(1), for local reproduction
+# Build crash handler shared libraries
 RUN clang-${LLVM_V} -fPIC -DENABLE_NYX -DNO_PT_NYX -D_GNU_SOURCE \
     smite-nyx-sys/src/nyx-crash-handler.c -ldl -shared -o /nyx-crash-handler.so && \
     clang-${LLVM_V} -fPIC -D_GNU_SOURCE \
@@ -120,7 +110,7 @@ COPY --from=builder /usr/local/bin/bitcoin-cli /usr/local/bin/bitcoin-cli
 # Copy the ldk-scenario binary
 COPY --from=builder /smite/target/release/ldk_${SCENARIO} /ldk-scenario
 
-# Default to the local crash handler; init.sh overrides with the Nyx version.
+# Default to the local crash handler
 ENV SMITE_CRASH_HANDLER=/crash-handler.so
 
 # Copy the init script

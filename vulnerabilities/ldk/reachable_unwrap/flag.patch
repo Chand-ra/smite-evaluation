@@ -1,14 +1,12 @@
-diff --git a/lightning/src/ln/channelmanager.rs b/lightning/src/ln/channelmanager.rs
-index b2b28cdf3..d2a7206d7 100644
---- a/lightning/src/ln/channelmanager.rs
-+++ b/lightning/src/ln/channelmanager.rs
-@@ -6170,6 +6170,9 @@ where
+--- a/lightning/src/ln/channelmanager.rs	2026-07-30 15:53:44.697746545 +0000
++++ b/lightning/src/ln/channelmanager.rs	2026-07-30 16:12:40.058892432 +0000
+@@ -10138,6 +10138,9 @@
  
- 		// If we're doing manual acceptance checks on the channel, then defer creation until we're sure we want to accept.
- 		if self.default_configuration.manually_accept_inbound_channels {
-+			if msg.channel_type.is_none() {
-+				panic!("SMITE_FLAG_REACHABLE_UNWRAP");
-+			}
- 			let mut pending_events = self.pending_events.lock().unwrap();
- 			pending_events.push_back((events::Event::OpenChannelRequest {
- 				temporary_channel_id: msg.temporary_channel_id.clone(),
+ 		// We can get the channel type at this point already as we'll need it immediately in both the
+ 		// manual and the automatic acceptance cases.
++        	if common_fields.channel_type.is_none() {
++	        	panic!("SMITE_FLAG_REACHABLE_UNWRAP");
++        	}
+ 		let channel_type = channel::channel_type_from_open_channel(
+ 			common_fields, &self.channel_type_features()
+ 		).map_err(|e| MsgHandleErrInternal::from_chan_no_close(e, common_fields.temporary_channel_id))?;

@@ -199,6 +199,7 @@ class TrialConfig:
         """The exact afl-fuzz invocation for a standalone runner."""
         # Fixed power schedule for every standalone trial.
         POWER_SCHEDULE = "explore"
+        EXEC_TIMEOUT = "500" # 0.5 seconds
         node = get_numa_node(self.core)
         return [
             "numactl",
@@ -214,6 +215,8 @@ class TrialConfig:
             POWER_SCHEDULE,
             "-V",
             str(self.timeout),
+            "-t",
+            EXEC_TIMEOUT,
             "--",
             str(self.sharedir),
         ]

@@ -1,8 +1,8 @@
 {
   "cve": "bogus_min_msat",
   "target": "ldk",
-  "buggy_commit": "972afcb5138332d86ccbf764a391c3544c12dc96",
-  "patch_commit": "217e194686f1e0c2a3ffbe48b7d8c4e07f63ad97",
+  "buggy_commit": "7b4fb9da886a58b32ad6a286eb7a5cd9c1ed01cf",
+  "patch_commit": "9123d6d41bb9f2f3094c38344c23278df84c7ee2",
   "sanitizer": "abort",
   "flag_identifier": "SMITE_FLAG_BOGUS_MIN_MSAT",
   "poc_found_by_config": []

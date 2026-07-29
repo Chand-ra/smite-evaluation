@@ -1,19 +1,16 @@
-diff --git a/lightning/src/offers/invoice_request.rs b/lightning/src/offers/invoice_request.rs
-index fa3d9161b..8da29bfe6 100644
 --- a/lightning/src/offers/invoice_request.rs
 +++ b/lightning/src/offers/invoice_request.rs
-@@ -944,7 +944,13 @@ impl VerifiedInvoiceRequest {
- 			payer_id: *payer_id,
- 			quantity: *quantity,
- 			payer_note_truncated: payer_note.clone()
--				.map(|mut s| { s.truncate(PAYER_NOTE_LIMIT); UntrustedString(s) }),
-+				.map(|mut s| {
+@@ -1018,7 +1018,12 @@
+ 				.clone()
+ 				// Truncate the payer note to `PAYER_NOTE_LIMIT` bytes, rounding
+ 				// down to the nearest valid UTF-8 code point boundary.
+-				.map(|s| UntrustedString(string_truncate_safe(s, PAYER_NOTE_LIMIT))),
++				.map(|s| {
 +					if PAYER_NOTE_LIMIT < s.len() && !s.is_char_boundary(PAYER_NOTE_LIMIT) {
-+						eprintln!("SMITE_FLAG_BOLT12_OFFER");
++						panic!("SMITE_FLAG_BOLT12_OFFER");
 +					}
-+					s.truncate(PAYER_NOTE_LIMIT);
-+					UntrustedString(s)
++					UntrustedString(string_truncate_safe(s, PAYER_NOTE_LIMIT))
 +				}),
+ 			human_readable_name: self.offer_from_hrn().clone(),
  		}
  	}
- }

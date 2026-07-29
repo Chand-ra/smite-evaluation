@@ -70,3 +70,4 @@ cargo build --release -p smite-ir-mutator
 # Enable KVM-backdoor for Nyx
 echo "Enabling VMware backdoor..."
 sudo "$SMITE_DIR/scripts/enable-vmware-backdoor.sh"
+
