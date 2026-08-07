@@ -37,7 +37,6 @@ COMPLETION_GRACE_PERIOD_SEC = 120
 POLL_INTERVAL = 3
 MAX_STARTUP_RETRIES = 6
 STARTUP_RETRY_DELAY_BASE = 30
-BOOT_LOCK_PATH = Path("/tmp/smite-nyx-boot.lock")
 POWER_SCHEDULE = "explore"
 EVAL_DIR = Path(__file__).parent.parent
 
@@ -316,14 +315,11 @@ def execute_single_attempt(
     repro: ReproductionManager,
 ) -> tuple[float | None, bool, bool]:
     """Handles the boot lock, subprocess execution, and the monitoring loop for a single attempt."""
-    with BOOT_LOCK_PATH.open("w") as lock_file:
-        fcntl.flock(lock_file, fcntl.LOCK_EX)
-        log_fh = attempt_log.open("w")
-        process = subprocess.Popen(
-            cmd, env=env, stdout=log_fh, stderr=subprocess.STDOUT
-        )
-        ready = wait_for_afl_ready(process, attempt_log)
-        fcntl.flock(lock_file, fcntl.LOCK_UN)
+    log_fh = attempt_log.open("w")
+    process = subprocess.Popen(
+        cmd, env=env, stdout=log_fh, stderr=subprocess.STDOUT
+    )
+    ready = wait_for_afl_ready(process, attempt_log)
 
     if not ready:
         process.terminate()
