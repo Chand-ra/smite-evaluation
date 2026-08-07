@@ -404,7 +404,7 @@ def run(args):
         print(f"ERROR: seed directory empty: {seed_dir}", flush=True)
         sys.exit(1)
 
-    trial_dir = EVAL_DIR / "results" / target / cve / config / f"trial-{args.trial:02d}"
+    trial_dir = EVAL_DIR / "survival-results" / target / cve / config / f"trial-{args.trial:02d}"
     afl_out = trial_dir / "afl-out"
     crashes = afl_out / "default" / "crashes"
 
