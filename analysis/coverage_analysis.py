@@ -28,6 +28,7 @@ sns.set_style("whitegrid")
 
 def process_data(config_a, config_b, targets, data_paths):
     summary_stats, p_values_cov_raw, p_values_auc_raw = [], [], []
+    global_plot_data = {}  # Added to store data for the global figures
 
     for target in targets:
         print(f"\n[*] Processing Target: {target}")
@@ -88,6 +89,17 @@ def process_data(config_a, config_b, targets, data_paths):
         )
         a12_auc = vargha_delaney_a12(u_stat_auc, n_b, n_a)
         p_values_auc_raw.append(p_raw_auc)
+
+        # Save data needed for the combined figures
+        global_plot_data[target] = {
+            "times": grid_times,
+            "ts_a": np.array(interpolated_series[config_a]),
+            "ts_b": np.array(interpolated_series[config_b]),
+            "cov_a": cov_a,
+            "cov_b": cov_b,
+            "auc_a": auc_a,
+            "auc_b": auc_b,
+        }
 
         summary_stats.append(
             {
@@ -172,6 +184,98 @@ def process_data(config_a, config_b, targets, data_paths):
         plt.tight_layout()
         plt.savefig(COVERAGE_OUTPUT_DIR / f"{target}_time_series.png", dpi=300)
         plt.close()
+
+    # --- Generate new combined grid figures ---
+    configs_style = {
+        config_a: {"label": "Baseline", "color": "0.4", "linestyle": "--"},
+        config_b: {"label": "IR (full stack)", "color": "C0", "linestyle": "-"},
+    }
+
+    # 1. Coverage Time Series Grid
+    fig_ts, axes_ts = plt.subplots(2, 2, figsize=(7.0, 5.0), sharex=True)
+    for ax, target in zip(axes_ts.flat, targets):
+        if target not in global_plot_data:
+            continue
+        data = global_plot_data[target]
+        for config_name, style in configs_style.items():
+            ts = data["ts_a"] if config_name == config_a else data["ts_b"]
+            if len(ts) == 0:
+                continue
+            median_edges = np.median(ts, axis=0)
+            iqr_lo = np.percentile(ts, 25, axis=0)
+            iqr_hi = np.percentile(ts, 75, axis=0)
+            ax.plot(
+                data["times"],
+                median_edges,
+                label=style["label"],
+                color=style["color"],
+                linestyle=style["linestyle"],
+            )
+            ax.fill_between(
+                data["times"],
+                iqr_lo,
+                iqr_hi,
+                color=style["color"],
+                alpha=0.15,
+                linewidth=0,
+            )
+        ax.set_title(target.upper(), fontsize=10)
+        ax.set_xlim(0, max(data["times"]) if len(data["times"]) > 0 else 24)
+
+    for ax in axes_ts[-1, :]:
+        ax.set_xlabel("Time (hours)")
+    for ax in axes_ts[:, 0]:
+        ax.set_ylabel("Median edge coverage")
+    handles, labels = axes_ts[0, 0].get_legend_handles_labels()
+    fig_ts.legend(
+        handles,
+        labels,
+        loc="upper center",
+        ncol=2,
+        frameon=False,
+        bbox_to_anchor=(0.5, 1.02),
+    )
+    fig_ts.tight_layout(rect=[0, 0, 1, 0.96])
+    fig_ts.savefig(
+        COVERAGE_OUTPUT_DIR / "fig_coverage_timeseries.pdf", bbox_inches="tight"
+    )
+    plt.close(fig_ts)
+
+    # 2. Coverage Distributions Grid
+    metrics = [("edges", "Final Edge Coverage"), ("auc", "Coverage AUC")]
+    fig_dist, axes_dist = plt.subplots(2, 4, figsize=(7.2, 4.0))
+    for row, (metric_key, metric_label) in enumerate(metrics):
+        for col, target in enumerate(targets):
+            if target not in global_plot_data:
+                continue
+            ax = axes_dist[row, col]
+            data = global_plot_data[target]
+            baseline_vals = data["cov_a"] if metric_key == "edges" else data["auc_a"]
+            exp_vals = data["cov_b"] if metric_key == "edges" else data["auc_b"]
+
+            if len(baseline_vals) == 0 or len(exp_vals) == 0:
+                continue
+
+            bp = ax.boxplot(
+                [baseline_vals, exp_vals],
+                widths=0.6,
+                patch_artist=True,
+                showfliers=False,
+            )
+            bp["boxes"][0].set_facecolor("0.85")
+            bp["boxes"][1].set_facecolor("C0")
+            ax.set_xticklabels(["B", "E"], fontsize=8)
+            if row == 0:
+                ax.set_title(target.upper(), fontsize=10)
+            if col == 0:
+                ax.set_ylabel(metric_label, fontsize=9)
+
+    fig_dist.tight_layout()
+    fig_dist.savefig(
+        COVERAGE_OUTPUT_DIR / "fig_coverage_distributions.pdf", bbox_inches="tight"
+    )
+    plt.close(fig_dist)
+    # ------------------------------------------
 
     if len(p_values_cov_raw) > 0:
         reject_cov, p_adj_cov, _, _ = multipletests(
