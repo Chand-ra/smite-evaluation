@@ -5,7 +5,7 @@ Smite Survival (TTE) Campaign Orchestrator
 This script automates the execution of parallel time-to-exposure (TTE) trials against
 known vulnerabilities for rigorous A/B survival-analysis evaluation. It queues jobs, maps
 cores to trials for strict CPU isolation via `numactl`, launches `afl-fuzz` directly
-against pre-built Nyx sharedirs (one per target/CVE/scenario), and races background
+against pre-built Nyx sharedirs (one per target/bug/scenario), and races background
 reproduction attempts against every crash as it appears.
 
 Unlike the coverage orchestrator, this script does not build Docker images itself: each
@@ -60,7 +60,8 @@ Usage:
         --afl-dir AFL_DIR \
         [--trials N | --trial-ids ID[,ID...]] \
         [--timeout SECONDS] \
-        [--seed-dir SEED_DIR]
+        [--seed-dir SEED_DIR] \
+        [--bugs BUG_ID[,BUG_ID...]]
 
 Examples:
     # Standard survival evaluation (4 isolated cores, 20 trials per bug/config)
@@ -176,8 +177,11 @@ def tte_from_filename(crash_file: Path | str) -> float | None:
     return None
 
 
-def load_bugs(target_filter: list[str] | None) -> list[dict]:
-    """Load every vulnerability's metadata.json, optionally filtered by target."""
+def load_bugs(
+    target_filter: list[str] | None, bug_filter: list[str] | None = None
+) -> list[dict]:
+    """Load every vulnerability's metadata.json, optionally filtered by target
+    and/or a list of bug identifiers (case-insensitive)."""
     bugs = []
     for path in sorted((EVAL_DIR / "vulnerabilities").rglob("metadata.json")):
         with open(path) as f:
@@ -185,6 +189,9 @@ def load_bugs(target_filter: list[str] | None) -> list[dict]:
         meta["_meta_path"] = str(path)
 
         if target_filter is not None and meta["target"] not in target_filter:
+            continue
+
+        if bug_filter is not None and meta["cve"].lower() not in bug_filter:
             continue
 
         bugs.append(meta)
@@ -287,7 +294,7 @@ class TrialConfig:
         """Docker image tag: smite-eval-<target>-<cve>-<scenario>.
 
         Unlike the coverage orchestrator, this is NOT label-scoped: the image is
-        built once per (target, CVE, scenario) at the historically vulnerable
+        built once per (target, bug, scenario) at the historically vulnerable
         commit, external to this script. Ablation labels only swap the mutator
         .so, not the target image.
         """
@@ -573,7 +580,7 @@ def print_campaign_summary(
     grid.add_column(style="bold cyan", justify="right")
     grid.add_column(style="white")
 
-    grid.add_row("Bugs (CVEs)", str(len(bugs)))
+    grid.add_row("Bugs", str(len(bugs)))
     grid.add_row("Configurations", str(len(labels)))
     grid.add_row("Trials per bug/config", str(trials))
     grid.add_row("Allocated cores", str(len(cores)))
@@ -1160,6 +1167,12 @@ def parse_args():
         type=Path,
         help="Directory containing one seed-corpus subdirectory per scenario/target, e.g. <seed-dir>/ir/cln/",
     )
+    p.add_argument(
+        "--bugs",
+        type=str,
+        default=None,
+        help="Filter by a comma-separated list of bug identifiers (case-insensitive), e.g., send_tlvs,badonion"
+    )
 
     args = p.parse_args()
 
@@ -1180,9 +1193,14 @@ def main():
         [t.strip() for t in args.targets.split(",")] if args.targets else None
     )
 
-    bugs = load_bugs(target_filter)
+    bug_filter = (
+        [b.strip().lower() for b in args.bugs.split(",")] if args.bugs else None
+    )
+
+    bugs = load_bugs(target_filter, args.bugs)
     if not bugs:
-        sys.exit("ERROR: No matching vulnerabilities found under vulnerabilities/.")
+        if args.bugs:
+            sys.exit(f"ERROR: No vulnerabilities found matching --bugs '{args.bugs}'.")
 
     labels, label_scenarios = [], {}
     try:
