@@ -1,8 +1,20 @@
+diff --git a/smite-scenarios/src/targets/bitcoind.rs b/smite-scenarios/src/targets/bitcoind.rs
+index e46b57e..03bad84 100644
+--- a/smite-scenarios/src/targets/bitcoind.rs
++++ b/smite-scenarios/src/targets/bitcoind.rs
+@@ -77,6 +77,7 @@ pub fn start(
+         .arg("-rpcuser=rpcuser")
+         .arg("-rpcpassword=rpcpass")
+         .arg("-fallbackfee=0.00001")
++        .arg("-dustrelayfee=0")
+         .arg("-txindex=1")
+         .arg("-server=1")
+         .arg("-rest=1")
 diff --git a/smite-scenarios/src/targets/cln.rs b/smite-scenarios/src/targets/cln.rs
-index 7dc078c..34cb26b 100644
+index c80ea86..56e78b7 100644
 --- a/smite-scenarios/src/targets/cln.rs
 +++ b/smite-scenarios/src/targets/cln.rs
-@@ -103,7 +103,7 @@ impl ClnTarget {
+@@ -107,7 +107,7 @@ impl ClnTarget {
              .arg("--log-level=info")
              .arg(format!("--log-file={}/cln.log", cln_dir.display()))
              .stdout(Stdio::null())
@@ -25,10 +37,10 @@ index 8a0a561..fd298c5 100644
          let eclair = ManagedProcess::spawn(&mut cmd, "eclair")?;
  
 diff --git a/smite-scenarios/src/targets/ldk.rs b/smite-scenarios/src/targets/ldk.rs
-index 58194eb..0f71efa 100644
+index c1d6145..a6e2bc3 100644
 --- a/smite-scenarios/src/targets/ldk.rs
 +++ b/smite-scenarios/src/targets/ldk.rs
-@@ -79,7 +79,7 @@ impl LdkTarget {
+@@ -82,7 +82,7 @@ impl LdkTarget {
              .arg(config.bitcoind_rpc_port.to_string())
              .arg(bitcoind::INITIAL_BLOCKS.to_string())
              .stdout(Stdio::piped())

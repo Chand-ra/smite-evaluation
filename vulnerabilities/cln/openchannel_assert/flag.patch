@@ -1,5 +1,5 @@
 diff --git a/hsmd/libhsmd.c b/hsmd/libhsmd.c
-index 7ce12bc08..7f9c601db 100644
+index 0b7a9f5cb..ecdeaa783 100644
 --- a/hsmd/libhsmd.c
 +++ b/hsmd/libhsmd.c
 @@ -15,6 +15,7 @@
@@ -8,13 +8,14 @@ index 7ce12bc08..7f9c601db 100644
  #include <wally_psbt.h>
 +#include <stdio.h>
  
- /* The negotiated protocol version ends up in here. */
- u64 hsmd_mutual_version;
-@@ -397,6 +398,7 @@ static u8 *handle_setup_channel(struct hsmd_client *c, const u8 *msg_in)
+ /* If they specify --dev-force-privkey it ends up in here. */
+ struct privkey *dev_force_privkey;
+@@ -374,6 +375,7 @@ static u8 *handle_setup_channel(struct hsmd_client *c, const u8 *msg_in)
+ 
  	/* Fail fast if any values are uninitialized or obviously wrong. */
  	assert(amount_sat_greater(channel_value, AMOUNT_SAT(0)));
++	fprintf(stderr, "SMITE_FLAG_OPENCHANNEL_ASSERT\n");
  	assert(amount_sat_to_msat(&value_msat, channel_value));
-+	if (mem_is_zero(&funding_txid, sizeof(funding_txid))) { fprintf(stderr, "SMITE_FLAG_FUNDING_CREATED\n"); abort(); }
  	assert(!mem_is_zero(&funding_txid, sizeof(funding_txid)));
  	assert(local_to_self_delay > 0);
- 	assert(remote_to_self_delay > 0);
+

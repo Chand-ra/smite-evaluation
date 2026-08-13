@@ -1,9 +1,0 @@
-{
-  "cve": "stale_gossmap",
-  "target": "cln",
-  "buggy_commit": "8d7a99b58913e2f022fe7c194a8d54e4bede6182",
-  "patch_commit": "1018b5449be8433caa5070ccd87bded920ee44ef",
-  "sanitizer": "abort",
-  "flag_identifier": "SMITE_FLAG_STALE_GOSSMAP",
-  "poc_found_by_config": []
-}
