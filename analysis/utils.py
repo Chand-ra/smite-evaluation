@@ -20,6 +20,18 @@ COVERAGE_OUTPUT_DIR = EVAL_DIR / "analysis" / "coverage-output"
 
 TIMEOUT = 86_400.0
 
+# Each target directory under coverage-results/ holds 6 config subdirectories:
+# the baseline, the full IR mutator stack, and one ir-<mutator> variant per
+# mutator with that single mutator ablated from the full stack.
+COVERAGE_BASELINE_CONFIG = "encrypted_bytes"
+COVERAGE_FULL_STACK_CONFIG = "ir-full-stack"
+ABLATION_CONFIGS = {
+    "splice": "ir-splice",
+    "gen-insert": "ir-gen-insert",
+    "delete": "ir-delete",
+    "reorder": "ir-reorder",
+}
+
 # Ensure output directories exists for all downstream scripts
 SURVIVAL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 COVERAGE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -27,10 +39,52 @@ COVERAGE_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 # ── Data Validation ────────────────────────────────────────────────────────────
 
 
+def _find_valid_trials(target_path, label):
+    """Scans a single <target>/<config> directory for trial subdirectories with
+    the required AFL++ output files, unwrapping the afl-out/default layout when
+    present. Shared by validate_coverage_data() and validate_ablation_data() so
+    the trial-validity rules only live in one place."""
+    if not target_path.exists():
+        print(
+            f"[!] Warning: {target_path.relative_to(EVAL_DIR)} does not exist. Skipping."
+        )
+        return []
+
+    trials = [d.name for d in target_path.iterdir() if d.is_dir()]
+    valid_trials = []
+
+    for trial in trials:
+        trial_path = target_path / trial
+
+        base_out = trial_path / "afl-out" / "default"
+        if not base_out.exists():
+            base_out = trial_path
+
+        req_files = ["plot_data", "fuzzer_stats", "fuzz_bitmap"]
+        if all((base_out / f).exists() for f in req_files):
+            # Store string paths to maintain compatibility with existing numpy/pandas code
+            valid_trials.append(str(base_out))
+        else:
+            print(
+                f"[!] Warning: Missing required files in {trial_path.relative_to(EVAL_DIR)}. Skipping."
+            )
+
+    print(f"    - {label}: found {len(valid_trials)} valid trials")
+    return valid_trials
+
+
 def validate_coverage_data():
-    """Scans the results directory and validates the coverage evaluation layout."""
+    """Scans the results directory and validates the coverage evaluation layout.
+
+    Each target directory contains 6 configs (baseline, full stack, and 4
+    per-mutator ablation variants); this only validates/loads the main
+    baseline-vs-full-stack comparison. Use validate_ablation_data() for the
+    ir-<mutator> ablation configs.
+    """
     if not COVERAGE_RESULTS_DIR.exists():
-        raise FileNotFoundError(f"Results directory '{COVERAGE_RESULTS_DIR}' does not exist.")
+        raise FileNotFoundError(
+            f"Results directory '{COVERAGE_RESULTS_DIR}' does not exist."
+        )
 
     targets = sorted(
         [
@@ -40,33 +94,21 @@ def validate_coverage_data():
         ]
     )
     if not targets:
-        raise ValueError(
-            f"No valid targets found in {COVERAGE_RESULTS_DIR}"
-        )
+        raise ValueError(f"No valid targets found in {COVERAGE_RESULTS_DIR}")
 
     print(f"[*] Detected Targets for Coverage: {targets}")
-    sample_cov_dir = COVERAGE_RESULTS_DIR / targets[0]
-    items = [d.name for d in sample_cov_dir.iterdir() if d.is_dir()]
 
-    if len(items) != 2:
-        raise ValueError(
-            f"Expected exactly 2 configurations in {sample_cov_dir}, found {len(items)}: {items}"
-        )
-
-    config_a, config_b = sorted(items)
+    config_a, config_b = COVERAGE_BASELINE_CONFIG, COVERAGE_FULL_STACK_CONFIG
     print(f"[*] Detected Configurations: A = {config_a}, B = {config_b}")
 
     for target in targets:
-        tgt_configs = set(
-            [
-                d.name
-                for d in (COVERAGE_RESULTS_DIR / target).iterdir()
-                if d.is_dir()
-            ]
-        )
+        tgt_configs = {
+            d.name for d in (COVERAGE_RESULTS_DIR / target).iterdir() if d.is_dir()
+        }
         if config_a not in tgt_configs or config_b not in tgt_configs:
             raise ValueError(
-                f"Target mismatch! {target} must contain both {config_a} and {config_b}"
+                f"Target mismatch! {target} must contain both {config_a} and {config_b}, "
+                f"found: {sorted(tgt_configs)}"
             )
 
     data_paths = {config_a: {}, config_b: {}}
@@ -74,31 +116,75 @@ def validate_coverage_data():
     for config in [config_a, config_b]:
         for target in targets:
             target_path = COVERAGE_RESULTS_DIR / target / config
-            trials = [d.name for d in target_path.iterdir() if d.is_dir()]
-            valid_trials = []
-
-            for trial in trials:
-                trial_path = target_path / trial
-
-                base_out = trial_path / "afl-out" / "default"
-                if not base_out.exists():
-                    base_out = trial_path
-
-                req_files = ["plot_data", "fuzzer_stats", "fuzz_bitmap"]
-                if all((base_out / f).exists() for f in req_files):
-                    # Store string paths to maintain compatibility with existing numpy/pandas code
-                    valid_trials.append(str(base_out))
-                else:
-                    print(
-                        f"[!] Warning: Missing required files in {trial_path.relative_to(EVAL_DIR)}. Skipping."
-                    )
-
-            data_paths[config][target] = valid_trials
-            print(
-                f"    - {target}/coverage/{config}: found {len(valid_trials)} valid trials"
+            data_paths[config][target] = _find_valid_trials(
+                target_path, f"{target}/coverage/{config}"
             )
 
     return config_a, config_b, targets, data_paths
+
+
+def validate_ablation_data():
+    """Scans the same coverage-results tree for the mutator-ablation configs:
+    for each mutator, ir-full-stack (shared "full" arm) vs. ir-<mutator> (that
+    single mutator ablated from the full stack).
+
+    Returns (mutators, targets, ablation_data_paths) where
+    ablation_data_paths[mutator][target]["full" | "ablated"] is a list of
+    trial directory paths, matching the shape process_ablation_appendix()
+    expects.
+    """
+    if not COVERAGE_RESULTS_DIR.exists():
+        raise FileNotFoundError(
+            f"Results directory '{COVERAGE_RESULTS_DIR}' does not exist."
+        )
+
+    targets = sorted(
+        d.name
+        for d in COVERAGE_RESULTS_DIR.iterdir()
+        if d.is_dir() and not d.name.startswith(".")
+    )
+    if not targets:
+        raise ValueError(f"No valid targets found in {COVERAGE_RESULTS_DIR}")
+
+    required_configs = {COVERAGE_FULL_STACK_CONFIG, *ABLATION_CONFIGS.values()}
+    missing = {}
+    for target in targets:
+        tgt_configs = {
+            d.name for d in (COVERAGE_RESULTS_DIR / target).iterdir() if d.is_dir()
+        }
+        gap = required_configs - tgt_configs
+        if gap:
+            missing[target] = sorted(gap)
+    if missing:
+        raise ValueError(f"Missing ablation configs by target: {missing}")
+
+    mutators = sorted(ABLATION_CONFIGS.keys())
+    print(f"[*] Detected Ablation Mutators: {mutators}")
+
+    ablation_data_paths = {mutator: {} for mutator in mutators}
+
+    # ir-full-stack trials are shared across every mutator's "full" arm for a
+    # given target, so scan them once per target instead of once per mutator.
+    full_stack_by_target = {
+        target: _find_valid_trials(
+            COVERAGE_RESULTS_DIR / target / COVERAGE_FULL_STACK_CONFIG,
+            f"{target}/ablation/{COVERAGE_FULL_STACK_CONFIG}",
+        )
+        for target in targets
+    }
+
+    for mutator, config_name in ABLATION_CONFIGS.items():
+        for target in targets:
+            ablated_trials = _find_valid_trials(
+                COVERAGE_RESULTS_DIR / target / config_name,
+                f"{target}/ablation/{mutator}",
+            )
+            ablation_data_paths[mutator][target] = {
+                "full": full_stack_by_target[target],
+                "ablated": ablated_trials,
+            }
+
+    return mutators, targets, ablation_data_paths
 
 
 def validate_survival_data():
