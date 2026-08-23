@@ -1,9 +1,0 @@
-{
-  "cve": "early_cupdate",
-  "target": "cln",
-  "buggy_commit": "6c04a6c15ad04977eb29e8c6322fe9846d89d507",
-  "patch_commit": "23460eb89d2e193a5ad2425029c1da7c5275feac",
-  "sanitizer": "abort",
-  "flag_identifier": "SMITE_FLAG_EARLY_CUPDATE",
-  "poc_found_by_config": []
-}

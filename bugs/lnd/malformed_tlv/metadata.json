@@ -1,0 +1,11 @@
+{
+  "bug": "malformed_tlv",
+  "target": "lnd",
+  "buggy_commit": "013f5c93ed3f2ccad03a87e146b06c704dd6cb1a",
+  "patch_commit": "5a7925008ee8cc6e990abe6a64928007183bd4a0",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_MALFORMED_TLV",
+  "poc_found_by_config": [
+    "encrypted_bytes"
+  ]
+}

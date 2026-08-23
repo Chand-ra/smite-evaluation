@@ -1,0 +1,12 @@
+{
+  "bug": "gossiper_deadlock",
+  "target": "lnd",
+  "buggy_commit": "06b175a14028bf3d82e7f38da3843194d8b4802e",
+  "patch_commit": "21588acb3d5b9b4bb605b0852c91f10b6bb2a1c6",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_GOSSIPER_DEADLOCK",
+  "poc_found_by_config": [
+    "encrypted_bytes",
+    "ir"
+  ]
+}

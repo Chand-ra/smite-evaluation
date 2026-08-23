@@ -5,13 +5,13 @@ smite-evaluation/
 ├── Effectiveness Evaluation Framework.md   # ground-truth methodology and evaluation design
 ├── vulnerabilities/
 │   ├── cln/
-│   │   ├── CVE-2023-XXXX/            # Standard TTE Bug
+│   │   ├── BUG-2023-XXXX/            # Standard TTE Bug
 │   │   │   ├── flag.patch            # diff that inserts the stderr diagnostic abort()/panic
-│   │   │   └── metadata.json         # CVE number, commit hash, flag identifier
+│   │   │   └── metadata.json         # BUG number, commit hash, flag identifier
 │   │   └── ...
 │   ├── lnd/
 │   ├── ldk/
-│   │   ├── CVE-2023-XXXX/
+│   │   ├── BUG-2023-XXXX/
 │   │   │   ├── smite.patch           # special patch required by LDK: modifies workloads/ldk/Cargo.toml and/or src/main.rs
 │   │   │   ├── flag.patch
 │   │   │   └── metadata.json
@@ -44,7 +44,7 @@ smite-evaluation/
 |   ├── README.md                     # describes the folder schema, data formats
 |   ├── trials.csv                    # global trial manifest: one row per TTE trial (Coverage excluded)
 |   ├── cln/
-|   │   ├── CVE-2023-XXXX/            # TTE Campaign Results
+|   │   ├── BUG-2023-XXXX/            # TTE Campaign Results
 |   │   │   ├── encrypted_bytes/
 |   │   │   │   ├── trial-01/
 |   │   │   │   │   ├── afl-fuzz-attempt-01.log  # stdout/stderr from AFL++ forkserver
@@ -56,7 +56,7 @@ smite-evaluation/
 |   │   │   └── ir-full-stack/
 |   │   │       ├── trial-01/
 |   │   │       └── ...
-|   │   └── CVE-2024-YYYY/
+|   │   └── BUG-2024-YYYY/
 |   ├── lnd/
 |   ├── ldk/
 |   └── eclair/
@@ -84,12 +84,12 @@ smite-evaluation/
 
 # 1. Standard TTE Bug Schema
 {
-  "cve": "CVE-2023-XXXX",
+  "bug": "BUG-2023-XXXX",
   "target": "cln",
   "buggy_commit": "abc123...",
   "patch_commit": "def456...",
   "sanitizer": "ASAN:heap-buffer-overflow",
-  "flag_identifier": "SMITE_FLAG_CVE_2023_XXXX",
+  "flag_identifier": "SMITE_FLAG_BUG_2023_XXXX",
   "poc_found_by_config": [
     "encrypted_bytes",
     "ir-full-stack"

@@ -1,9 +1,0 @@
-{
-  "cve": "shutdown_retransmit",
-  "target": "eclair",
-  "buggy_commit": "648f93f682f7b980507158fd3dc65d0a1c30962a",
-  "patch_commit": "8a65e35c8f1778e931b71821a9b32b13e68a1b93",
-  "sanitizer": "abort",
-  "flag_identifier": "SMITE_FLAG_SHUTDOWN_RETRANSMIT",
-  "poc_found_by_config": []
-}

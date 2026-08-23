@@ -23,15 +23,15 @@ git -C "$SMITE_DIR" apply "$EVAL_DIR/docker/stdio-inherit.patch" 2>/dev/null || 
 
 for meta_file in "$VULNS_DIR"/*/*/metadata.json; do
     target=$(python3 -c "import json,sys; print(json.load(open('$meta_file'))['target'])")
-    cve=$(python3 -c "import json,sys; print(json.load(open('$meta_file'))['cve'])")
+    bug=$(python3 -c "import json,sys; print(json.load(open('$meta_file'))['bug'])")
     commit=$(python3 -c "import json,sys; print(json.load(open('$meta_file'))['buggy_commit'])")
     patch=""
-    if [ -s "$VULNS_DIR/$target/$cve/flag.patch" ]; then
-        patch="${target}/${cve}/flag.patch"
+    if [ -s "$VULNS_DIR/$target/$bug/flag.patch" ]; then
+        patch="${target}/${bug}/flag.patch"
     fi
 
     for scenario in "${SCENARIOS[@]}"; do
-        image="smite-eval-${target}-${cve,,}-${scenario}"
+        image="smite-eval-${target}-${bug,,}-${scenario}"
 
         if docker image inspect "$image" > /dev/null 2>&1; then
             echo "[skip] $image already exists"
@@ -46,7 +46,7 @@ for meta_file in "$VULNS_DIR"/*/*/metadata.json; do
                 -t "$image" \
                 -f "$DOCKER_DIR/${target}.Dockerfile" \
                 --build-arg "SCENARIO=$scenario" \
-                --build-arg "SMITE_PATCH=${target}/${cve}/smite.patch" \
+                --build-arg "SMITE_PATCH=${target}/${bug}/smite.patch" \
                 --build-arg "FLAG_PATCH=$patch" \
                 "$SMITE_DIR"
         else

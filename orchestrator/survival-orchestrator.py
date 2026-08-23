@@ -9,7 +9,7 @@ against pre-built Nyx sharedirs (one per target/bug/scenario), and races backgro
 reproduction attempts against every crash as it appears.
 
 Unlike the coverage orchestrator, this script does not build Docker images itself: each
-(target, CVE, scenario) image is expected to already exist, built at the historically
+(target, BUG, scenario) image is expected to already exist, built at the historically
 vulnerable commit. All configs share ONE `--smite-dir` checkout — only the mutator
 shared library compiled there differs between ablation runs; compile the variant under
 test at `target/release/libsmite_ir_mutator.so` before invoking the orchestrator (see
@@ -37,7 +37,7 @@ Requirements:
 Generated Directory Structure:
     <out_dir>/
     ├── <target_1>/                      # e.g., 'cln'
-    │   ├── <cve_1>/                     # e.g., 'CVE-2023-0001'
+    │   ├── <bug_1>/                     # e.g., 'BUG-2023-0001'
     │   │   ├── <label_a>/               # e.g., 'ir-full-stack'
     │   │   │   ├── trial-01/
     │   │   │   │   ├── afl-fuzz.log     # Raw afl-fuzz stdout/stderr for this trial
@@ -48,7 +48,7 @@ Generated Directory Structure:
     │   │   │   ├── trial-02/
     │   │   │   └── ...
     │   │   └── <label_b>/
-    │   └── <cve_2>/
+    │   └── <bug_2>/
 
 Usage:
     python survival-orchestrator.py \
@@ -191,7 +191,7 @@ def load_bugs(
         if target_filter is not None and meta["target"] not in target_filter:
             continue
 
-        if bug_filter is not None and meta["cve"].lower() not in bug_filter:
+        if bug_filter is not None and meta["bug"].lower() not in bug_filter:
             continue
 
         bugs.append(meta)
@@ -257,21 +257,21 @@ class TrialConfig:
         return self.seed_dir / self.scenario / self.target
 
     @property
-    def cve(self) -> str:
-        return self.meta["cve"]
+    def bug(self) -> str:
+        return self.meta["bug"]
 
     @property
     def task_name(self) -> str:
         """Human-readable identifier shown in the dashboard and event log."""
-        return f"{self.label}/{self.target}/{self.cve}/trial-{self.trial_num:02d}"
+        return f"{self.label}/{self.target}/{self.bug}/trial-{self.trial_num:02d}"
 
     @property
     def trial_dir(self) -> Path:
-        """Per-trial output directory: <out_dir>/<target>/<cve>/<label>/trial-NN/"""
+        """Per-trial output directory: <out_dir>/<target>/<bug>/<label>/trial-NN/"""
         return (
             self.out_dir
             / self.target
-            / self.cve
+            / self.bug
             / self.label
             / f"trial-{self.trial_num:02d}"
         )
@@ -291,14 +291,14 @@ class TrialConfig:
 
     @property
     def image_tag(self) -> str:
-        """Docker image tag: smite-eval-<target>-<cve>-<scenario>.
+        """Docker image tag: smite-eval-<target>-<bug>-<scenario>.
 
         Unlike the coverage orchestrator, this is NOT label-scoped: the image is
         built once per (target, bug, scenario) at the historically vulnerable
         commit, external to this script. Ablation labels only swap the mutator
         .so, not the target image.
         """
-        return f"smite-eval-{self.target}-{self.cve.lower()}-{self.scenario}"
+        return f"smite-eval-{self.target}-{self.bug.lower()}-{self.scenario}"
 
     @property
     def log_path(self) -> Path:
@@ -448,7 +448,7 @@ class CampaignState:
         self,
         csv_path: Path,
         target: str,
-        cve: str,
+        bug: str,
         label: str,
         trial_num: int,
         tte: float | None,
@@ -461,12 +461,12 @@ class CampaignState:
                 w = csv.writer(f)
                 if write_header:
                     w.writerow(
-                        ["target", "cve", "config", "trial", "tte_seconds", "censored"]
+                        ["target", "bug", "config", "trial", "tte_seconds", "censored"]
                     )
                 w.writerow(
                     [
                         target,
-                        cve,
+                        bug,
                         label,
                         trial_num,
                         f"{tte:.3f}" if tte is not None else "",
@@ -1055,7 +1055,7 @@ class TrialRunner:
         self.state.append_csv_row(
             self.csv_path,
             self.cfg.target,
-            self.cfg.cve,
+            self.cfg.bug,
             self.cfg.label,
             self.cfg.trial_num,
             tte,
@@ -1080,7 +1080,7 @@ class TrialRunner:
         self.state.append_csv_row(
             self.csv_path,
             self.cfg.target,
-            self.cfg.cve,
+            self.cfg.bug,
             self.cfg.label,
             self.cfg.trial_num,
             None,

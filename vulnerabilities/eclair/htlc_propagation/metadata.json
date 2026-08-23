@@ -1,9 +1,0 @@
-{
-  "cve": "htlc_propagation",
-  "target": "eclair",
-  "buggy_commit": "4496ea77bcc0d527d42c0b0eef7b4ddcb84b2031",
-  "patch_commit": "c7e47ba751dc1ed4a96bcb4b7e5fcd49d78cfb78",
-  "sanitizer": "abort",
-  "flag_identifier": "SMITE_FLAG_HTLC_PROPAGATION",
-  "poc_found_by_config": []
-}

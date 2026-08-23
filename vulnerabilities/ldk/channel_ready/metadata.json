@@ -1,9 +1,0 @@
-{
-  "cve": "channel_ready",
-  "target": "ldk",
-  "buggy_commit": "d8a20eda5f74126d96700263716ee3938d4d3c8d",
-  "patch_commit": "7165d6d48fbb3fcabb81393d7c51b87ea6ced5c6",
-  "sanitizer": "abort",
-  "flag_identifier": "SMITE_FLAG_CHANNEL_READY",
-  "poc_found_by_config": []
-}

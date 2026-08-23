@@ -1,0 +1,12 @@
+{
+  "bug": "decode_drop",
+  "target": "eclair",
+  "buggy_commit": "bda55186f01bc59299fc9ef7db48cd7f6e732969",
+  "patch_commit": "fde8de65ffd984f071ea1cc9657dbf710f52994f",
+  "sanitizer": "abort",
+  "flag_identifier": "SMITE_FLAG_DECODE_DROP",
+  "poc_found_by_config": [
+    "encrypted_bytes",
+    "ir"
+  ]
+}

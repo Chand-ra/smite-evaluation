@@ -1,9 +1,0 @@
-{
-  "cve": "annsig_panic",
-  "target": "ldk",
-  "buggy_commit": "ae9e96e2772d2aaa3d6fbd1d17b83bb44f5ae07a",
-  "patch_commit": "82fdf0f62d983dfdcbd28f9037f94d70c7d98814",
-  "sanitizer": "abort",
-  "flag_identifier": "SMITE_FLAG_ANNSIG_PANIC",
-  "poc_found_by_config": []
-}

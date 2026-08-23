@@ -195,14 +195,14 @@ def validate_survival_data():
 
     df = pd.read_csv(csv_path)
 
-    required_cols = {"target", "cve", "config", "trial", "tte_seconds", "censored"}
+    required_cols = {"target", "bug", "config", "trial", "tte_seconds", "censored"}
     if not required_cols.issubset(df.columns):
         missing = required_cols - set(df.columns)
         raise ValueError(f"trials.csv is missing required columns: {missing}")
 
     # Drop coverage rows immediately to prevent survival analysis pollution
     initial_len = len(df)
-    df = df[df["cve"] != "coverage"].copy()
+    df = df[df["bug"] != "coverage"].copy()
     dropped = initial_len - len(df)
     if dropped > 0:
         print(f"[*] Filtered {dropped} coverage pseudo-trials from survival dataset.")
