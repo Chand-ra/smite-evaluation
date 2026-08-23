@@ -5,5 +5,7 @@
   "patch_commit": "7f24e833fb97155844be2866ba2229104c12e020",
   "sanitizer": "abort",
   "flag_identifier": "SMITE_FLAG_REACHABLE_UNWRAP",
-  "poc_found_by_config": []
+  "poc_found_by_config": [
+    "ir"
+  ]
 }

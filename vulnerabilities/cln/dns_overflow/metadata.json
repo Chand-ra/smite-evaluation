@@ -5,5 +5,8 @@
   "patch_commit": "c425de385cc8cb18cc2fd266e8a5ea746d3b2fb9",
   "sanitizer": "UBSan",
   "flag_identifier": "SMITE_FLAG_DNS_OVERFLOW",
-  "poc_found_by_config": []
+  "poc_found_by_config": [
+    "encrypted_bytes",
+    "ir"
+  ]
 }

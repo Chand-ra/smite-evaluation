@@ -5,5 +5,8 @@
   "patch_commit": "fde8de65ffd984f071ea1cc9657dbf710f52994f",
   "sanitizer": "abort",
   "flag_identifier": "SMITE_FLAG_DECODE_DROP",
-  "poc_found_by_config": []
+  "poc_found_by_config": [
+    "encrypted_bytes",
+    "ir"
+  ]
 }

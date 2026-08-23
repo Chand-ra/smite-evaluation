@@ -5,5 +5,7 @@
   "patch_commit": "5a7925008ee8cc6e990abe6a64928007183bd4a0",
   "sanitizer": "abort",
   "flag_identifier": "SMITE_FLAG_MALFORMED_TLV",
-  "poc_found_by_config": []
+  "poc_found_by_config": [
+    "encrypted_bytes"
+  ]
 }

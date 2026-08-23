@@ -5,5 +5,7 @@
   "patch_commit": "78b9ccf4322078c2a1e7772f86ef30861d5cf74d",
   "sanitizer": "abort",
   "flag_identifier": "abort",
-  "poc_found_by_config": []
+  "poc_found_by_config": [
+    "ir"
+  ]
 }

@@ -5,5 +5,7 @@
   "patch_commit": "00de49f750e3de7ac30b1734186178295b4d02ca",
   "sanitizer": "abort",
   "flag_identifier": "SMITE_FLAG_PUBKEY_EXCEPTION",
-  "poc_found_by_config": []
+  "poc_found_by_config": [
+    "encrypted_bytes"
+  ]
 }

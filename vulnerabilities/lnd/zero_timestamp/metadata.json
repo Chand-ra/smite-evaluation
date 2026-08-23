@@ -5,5 +5,7 @@
   "patch_commit": "cad1b957bfa2bc2c524d4c930470ce2b55ae8a11",
   "sanitizer": "abort",
   "flag_identifier": "SMITE_FLAG_ZERO_TIMESTAMP",
-  "poc_found_by_config": []
+  "poc_found_by_config": [
+    "ir"
+  ]
 }

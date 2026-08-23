@@ -482,6 +482,13 @@ class ReproductionManager:
     """Races background reproduction attempts against every crash a trial finds,
     stopping the trial as soon as one matches the target vulnerability's flag."""
 
+    """Caps simultaneous `docker run` reproduction attempts per trial. Without
+    this, every crash file spawns its own unbounded thread + docker invocation
+    with hundreds of crashes possible per trial and dozens of trials running
+    concurrently, that floods the Docker daemon and host resources, leaving
+    later attempts starved for hours instead of draining."""
+    MAX_CONCURRENT_REPRO = 1
+
     def __init__(self, meta: dict, image: str, trial_dir: Path):
         self.meta = meta
         self.image = image
@@ -491,9 +498,10 @@ class ReproductionManager:
         self._lock = threading.Lock()
         self._submitted = set()
         self._threads = []
+        self._sem = threading.Semaphore(self.MAX_CONCURRENT_REPRO)
 
     def submit(self, crash_file: Path):
-        if crash_file.name in self._submitted:
+        if crash_file.name in self._submitted or self.found_event.is_set():
             return
         self._submitted.add(crash_file.name)
         t = threading.Thread(target=self._worker, args=(crash_file,), daemon=True)
@@ -505,6 +513,7 @@ class ReproductionManager:
         shutil.copy(crash_file, safe_temp_file)
         safe_temp_file.chmod(0o644)
 
+        container_name = f"smite-repro-{uuid.uuid4().hex[:12]}"
         try:
             result = subprocess.run(
                 [
@@ -512,6 +521,8 @@ class ReproductionManager:
                     "run",
                     "--rm",
                     "-i",
+                    "--name",
+                    container_name,
                     "-v",
                     f"{safe_temp_file.resolve()}:/input.bin:ro",
                     "-e",
@@ -526,12 +537,24 @@ class ReproductionManager:
             )
             is_match = self.meta["flag_identifier"] in (result.stdout + result.stderr)
             return is_match, safe_temp_file
+        except subprocess.TimeoutExpired:
+            # subprocess's timeout only kills the docker CLI client — with no
+            # -t, no signal propagates to the container, so it leaks and runs
+            # forever unless explicitly killed by name here.
+            subprocess.run(["docker", "kill", container_name], capture_output=True)
+            print(
+                f"  [repro] timed out, killed container: {crash_file.name}", flush=True
+            )
+            return False, safe_temp_file
         except Exception as e:
             print(f"  [repro] failed: {crash_file.name}: {e}", flush=True)
             return False, safe_temp_file
 
     def _worker(self, crash_file: Path):
-        is_match, temp_file = self._reproduce(crash_file)
+        with self._sem:
+            if self.found_event.is_set():
+                return
+            is_match, temp_file = self._reproduce(crash_file)
 
         if is_match:
             with self._lock:
@@ -763,7 +786,7 @@ class TrialRunner:
 
     COMPLETION_GRACE_PERIOD_SEC = 120
     STARTUP_POLL_INTERVAL = 5
-    BOOT_TIMEOUT_SEC = 600
+    BOOT_TIMEOUT_SEC = 3600
     METRICS_POLL_INTERVAL = 2
 
     def __init__(self, config: TrialConfig, state: CampaignState, csv_path: Path):
@@ -1171,7 +1194,7 @@ def parse_args():
         "--bugs",
         type=str,
         default=None,
-        help="Filter by a comma-separated list of bug identifiers (case-insensitive), e.g., send_tlvs,badonion"
+        help="Filter by a comma-separated list of bug identifiers (case-insensitive), e.g., send_tlvs,badonion",
     )
 
     args = p.parse_args()
