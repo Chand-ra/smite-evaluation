@@ -1,0 +1,7 @@
+Target,BUG,n_Baseline,Found_Baseline,Med_Baseline,IQR_Baseline,n_Exp,Found_Exp,Med_Exp,IQR_Exp
+cln,early_cupdate,20,0,Not Reached,Not Reached,20,0,Not Reached,Not Reached
+eclair,htlc_propagation,20,0,Not Reached,Not Reached,20,0,Not Reached,Not Reached
+eclair,shutdown_retransmit,20,0,Not Reached,Not Reached,20,0,Not Reached,Not Reached
+ldk,annsig_panic,20,0,Not Reached,Not Reached,20,0,Not Reached,Not Reached
+ldk,channel_ready,20,0,Not Reached,Not Reached,20,0,Not Reached,Not Reached
+lnd,cupdate_no_htlc,20,0,Not Reached,Not Reached,20,0,Not Reached,Not Reached

@@ -18,18 +18,24 @@ the other arm -- but no median TTE is reported for the zero-event arm (its
 KM curve never crosses 0.5); it is reported as "Not Reached" instead.
 
 Outputs a consolidated Markdown report with embedded plots, plus a single
-compact "USENIX Ribbon" figure: a 1xN horizontal strip (N = number of
+compact "USENIX Ribbon" figure: an N x 1 vertical stack (N = number of
 targets), each panel showing the *pooled* cumulative probability of
 discovery (1 - S(t)) across every bug + trial for that target, on a log
 time axis. Per-bug TTEs span ~4 orders of magnitude within a single
 target's benchmark, so a per-bug grid on a linear axis just collapses the
 fast bugs to a vertical line near t=0; pooling + log-scale keeps the full
-range legible in one compact panel per target.
+range legible in one compact panel per target. Panels are stacked
+vertically (rather than side-by-side) to fit a single paper column, and
+each panel's x-axis is scaled to that target's own observed duration
+range rather than a single shared window, since targets can differ from
+each other by orders of magnitude and a shared window wastes most of a
+narrow column-width panel on the tighter-range targets.
 
 Usage:
     python3 analysis/survival_analysis.py
 """
 
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -184,7 +190,7 @@ if records:
         plt.close()
         generated_plots.append((target, bug_name, plot_filename))
 
-    # ── "USENIX Ribbon": pooled cumulative-discovery curves, 1 x N targets ───
+    # ── "USENIX Ribbon": pooled cumulative-discovery curves, 2-col grid ──────
     # Per-bug TTEs span ~4 orders of magnitude within a single target's
     # benchmark (e.g. cln: malformed_cannounce medians ~4s vs.
     # openchannel_assert ~16,000s), so a per-bug grid on a linear axis just
@@ -192,21 +198,38 @@ if records:
     # trial for a target into one KM fit per arm, plot 1-S(t) (cumulative
     # probability of discovery -- more intuitive for a security audience
     # than a downward-sloping survival curve), and use a log time axis to
-    # keep the full range legible in one compact panel per target.
+    # keep the full range legible. Panels are laid out two-per-row (matching
+    # the coverage-analysis grids), which fits more targets per row than a
+    # single column while still leaving each panel wide enough to read.
+    # Each panel gets its own x-limits derived from that target's own
+    # observed durations, rather than one shared [x_floor, TIMEOUT] window
+    # -- with per-target ranges differing by orders of magnitude, a shared
+    # window would leave the tighter-range targets squeezed into a sliver
+    # of their panel.
     targets_sorted = sorted(df["target"].unique())
+    ribbon_ncols = 2
+    ribbon_nrows = int(np.ceil(len(targets_sorted) / ribbon_ncols))
 
     fig_ribbon, axes_ribbon = plt.subplots(
-        1, len(targets_sorted), figsize=(3.0 * len(targets_sorted), 1.5), sharey=True
+        ribbon_nrows,
+        ribbon_ncols,
+        figsize=(7.0, 1.6 * ribbon_nrows),
+        sharey=True,
     )
-    if len(targets_sorted) == 1:
-        axes_ribbon = [axes_ribbon]
+    axes_ribbon = np.atleast_2d(axes_ribbon)
 
     legend_handles, legend_labels = None, None
-    min_positive_duration = df.loc[df["duration"] > 0, "duration"].min()
-    x_floor = max(min_positive_duration * 0.5, 1e-2)
 
-    for ax, target in zip(axes_ribbon, targets_sorted):
+    for i, target in enumerate(targets_sorted):
+        ax = axes_ribbon[i // ribbon_ncols, i % ribbon_ncols]
         tgt_df = df[df["target"] == target]
+
+        tgt_positive = tgt_df.loc[tgt_df["duration"] > 0, "duration"]
+        tgt_min = tgt_positive.min() if not tgt_positive.empty else 1e-2
+        tgt_max = tgt_df["duration"].max()
+        x_floor = max(tgt_min * 0.5, 1e-2)
+        x_ceil = max(tgt_max * 1.5, x_floor * 10)
+
         kmf = KaplanMeierFitter()
         for config, style in CONFIG_STYLES.items():
             arm = tgt_df[tgt_df["config"] == config]
@@ -218,9 +241,9 @@ if records:
             )
 
         ax.set_xscale("log")
-        ax.set_xlim(x_floor, TIMEOUT)
+        ax.set_xlim(x_floor, x_ceil)
         ax.set_ylim(0, 1.0)
-        ax.set_title(target.upper(), fontsize=9)
+        ax.set_title(target.upper(), fontsize=9, loc="left", pad=2)
         ax.set_xlabel("")
         ax.tick_params(labelsize=6)
 
@@ -230,10 +253,12 @@ if records:
                 legend_handles, legend_labels = ax.get_legend_handles_labels()
             leg.remove()
 
-    axes_ribbon[0].set_ylabel("P(discovered)", fontsize=8)
-    for ax in axes_ribbon[1:]:
-        ax.set_ylabel("")
+    # Turn off any trailing empty cells if the target count is odd.
+    for j in range(len(targets_sorted), ribbon_nrows * ribbon_ncols):
+        axes_ribbon[j // ribbon_ncols, j % ribbon_ncols].axis("off")
 
+    for ax in axes_ribbon[:, 0]:
+        ax.set_ylabel("P(discovered)", fontsize=8)
     fig_ribbon.supxlabel("Wall-clock time (s, log scale)", fontsize=8)
 
     if legend_handles is not None:
@@ -243,10 +268,10 @@ if records:
             loc="upper center",
             ncol=2,
             frameon=False,
-            bbox_to_anchor=(0.5, 1.12),
+            bbox_to_anchor=(0.5, 1.0 + 0.5 / (1.6 * ribbon_nrows)),
             fontsize=8,
         )
-    fig_ribbon.tight_layout(rect=[0, 0, 1, 0.8])
+    fig_ribbon.tight_layout(rect=[0, 0.02, 1, 0.92])
     fig_ribbon.savefig(
         SURVIVAL_OUTPUT_DIR / "fig_survival_ribbon.pdf", bbox_inches="tight"
     )
