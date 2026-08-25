@@ -3,7 +3,7 @@
 Smite Survival (TTE) Campaign Orchestrator
 
 This script automates the execution of parallel time-to-exposure (TTE) trials against
-known vulnerabilities for rigorous A/B survival-analysis evaluation. It queues jobs, maps
+known bugs for rigorous A/B survival-analysis evaluation. It queues jobs, maps
 cores to trials for strict CPU isolation via `numactl`, launches `afl-fuzz` directly
 against pre-built Nyx sharedirs (one per target/bug/scenario), and races background
 reproduction attempts against every crash as it appears.
@@ -180,10 +180,10 @@ def tte_from_filename(crash_file: Path | str) -> float | None:
 def load_bugs(
     target_filter: list[str] | None, bug_filter: list[str] | None = None
 ) -> list[dict]:
-    """Load every vulnerability's metadata.json, optionally filtered by target
+    """Load every bug's metadata.json, optionally filtered by target
     and/or a list of bug identifiers (case-insensitive)."""
     bugs = []
-    for path in sorted((EVAL_DIR / "vulnerabilities").rglob("metadata.json")):
+    for path in sorted((EVAL_DIR / "bugs").rglob("metadata.json")):
         with open(path) as f:
             meta = json.load(f)
         meta["_meta_path"] = str(path)
@@ -480,7 +480,7 @@ class CampaignState:
 
 class ReproductionManager:
     """Races background reproduction attempts against every crash a trial finds,
-    stopping the trial as soon as one matches the target vulnerability's flag."""
+    stopping the trial as soon as one matches the target bug's flag."""
 
     """Caps simultaneous `docker run` reproduction attempts per trial. Without
     this, every crash file spawns its own unbounded thread + docker invocation
@@ -1223,7 +1223,7 @@ def main():
     bugs = load_bugs(target_filter, args.bugs)
     if not bugs:
         if args.bugs:
-            sys.exit(f"ERROR: No vulnerabilities found matching --bugs '{args.bugs}'.")
+            sys.exit(f"ERROR: No bugs found matching --bugs '{args.bugs}'.")
 
     labels, label_scenarios = [], {}
     try:

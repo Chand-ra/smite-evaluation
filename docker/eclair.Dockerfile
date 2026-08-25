@@ -36,7 +36,7 @@ RUN if [ -n "$COMMIT_HASH" ]; then \
     fi
 
 ARG FLAG_PATCH=""
-COPY smite-evaluation/vulnerabilities/ /smite-vulns/
+COPY smite-evaluation/bugs/ /smite-vulns/
 RUN if [ -n "$FLAG_PATCH" ]; then \
         git -C /eclair-src apply "/smite-vulns/$FLAG_PATCH"; \
     fi

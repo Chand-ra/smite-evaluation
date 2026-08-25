@@ -403,7 +403,7 @@ if records or excluded_records:
 
         f.write("## 2. Interpretation Guide\n\n")
         f.write(
-            "Use the table above and the Kaplan-Meier plots below to evaluate the fuzzer's speed and reliability in triggering specific vulnerabilities.\n\n"
+            "Use the table above and the Kaplan-Meier plots below to evaluate the fuzzer's speed and reliability in triggering specific bugs.\n\n"
         )
 
         f.write("### Key Metrics\n\n")

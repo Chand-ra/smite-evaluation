@@ -3,7 +3,7 @@ smite-evaluation/
 ├── LICENSE
 ├── outline.txt                             # directory structure and architectural layout
 ├── Effectiveness Evaluation Framework.md   # ground-truth methodology and evaluation design
-├── vulnerabilities/
+├── bugs/
 │   ├── cln/
 │   │   ├── BUG-2023-XXXX/            # Standard TTE Bug
 │   │   │   ├── flag.patch            # diff that inserts the stderr diagnostic abort()/panic
@@ -80,7 +80,7 @@ smite-evaluation/
     └── eclair/
 
 
-## vulnerabilities metadata.json schemas
+## bugs metadata.json schemas
 
 # 1. Standard TTE Bug Schema
 {

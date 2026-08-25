@@ -71,8 +71,8 @@ docs/*.synctex.gz
 # results/*/trial-*/fuzzer_stats  — per-trial telemetry snapshot
 # results/*/trial-*/plot_data     — per-trial coverage time series
 # results/*/trial-*/crashing_input — crashing input for found bugs
-# vulnerabilities/*/flag.patch    — bug instrumentation patches
-# vulnerabilities/*/poc.input     — proof-of-concept inputs
-# vulnerabilities/*/metadata.json — bug registry
+# bugs/*/flag.patch    — bug instrumentation patches
+# bugs/*/poc.input     — proof-of-concept inputs
+# bugs/*/metadata.json — bug registry
 # seeds/                          — fixed seed corpora
 # docs/artifact-appendix.pdf      — compiled artifact appendix

@@ -47,8 +47,8 @@ WORKDIR /ldk-wrapper
 COPY workloads/ldk/Cargo.toml workloads/ldk/Cargo.lock ./
 COPY workloads/ldk/src/ src/
 
-# 1. Copy vulnerabilities
-COPY smite-evaluation/vulnerabilities/ /smite-vulns/
+# 1. Copy bugs
+COPY smite-evaluation/bugs/ /smite-vulns/
 
 ENV AFL_NO_CFG_FUZZING=1
 ENV RUSTFLAGS="-C target-cpu=x86-64-v3"

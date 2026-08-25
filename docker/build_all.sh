@@ -11,7 +11,7 @@ set -euo pipefail
 EVAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SMITE_DIR="$(cd "$EVAL_DIR/.." && pwd)"
 DOCKER_DIR="$EVAL_DIR/docker"
-VULNS_DIR="$EVAL_DIR/vulnerabilities"
+VULNS_DIR="$EVAL_DIR/bugs"
 
 # Scenarios to build. Add more if needed for ablation.
 SCENARIOS=("encrypted_bytes" "ir")

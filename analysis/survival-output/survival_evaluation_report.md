@@ -41,7 +41,7 @@ The following bugs were not triggered by any trial in either configuration withi
 
 ## 2. Interpretation Guide
 
-Use the table above and the Kaplan-Meier plots below to evaluate the fuzzer's speed and reliability in triggering specific vulnerabilities.
+Use the table above and the Kaplan-Meier plots below to evaluate the fuzzer's speed and reliability in triggering specific bugs.
 
 ### Key Metrics
 
